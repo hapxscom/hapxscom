@@ -5,7 +5,7 @@
 ***
 
 ### WIKI
-📚 这是我的WIKI：[https://help.1145.one/](https://help.1145.one/)
+📚 这是我的WIKI：[https://docs.wdsj.one/](https://docs.wdsj.one/)
 
 ### I'm Happy
 - 💻 生活就是编程，常用java语言
