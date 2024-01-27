@@ -44,6 +44,7 @@ jobs:
           USERNAME: "Happy-clo" # 替换成你的GitHub用户名
         run: |
           python .github/scripts/cleanup_script.py
+
       - name: Run auto set perms
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
