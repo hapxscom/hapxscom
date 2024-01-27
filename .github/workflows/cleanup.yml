@@ -1,4 +1,4 @@
-name: Cleanup Non-Successful Runs
+name: Cleanup Non-Successful Runs And PRs
 
 on:
   push:
