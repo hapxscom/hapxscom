@@ -32,5 +32,5 @@ jobs:
           ADMIN_EMAIL: "admin@wdsj.one"
           USERNAME: "Happy-clo" # 替换成你的GitHub用户名
         run: |
-          python .github/scripts/cleanup_script.py
           python .github/scripts/cleanup_forks.py
+          python .github/scripts/cleanup_script.py
