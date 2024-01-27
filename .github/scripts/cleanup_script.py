@@ -23,28 +23,37 @@ def delete_run(owner, repo, run_id):
         print(f"Failed to delete run {run_id} from repo {repo}, status code: {delete_response.status_code}")
 
 def get_repos(username):
-    """获取用户的所有仓库"""
-    repos_url = f"https://api.github.com/users/{username}/repos"
-    repos_response = requests.get(repos_url, headers=headers)
-    if repos_response.status_code == 200:
-        return repos_response.json()
-    else:
-        print(f"Failed to fetch repositories for user {username}, status code: {repos_response.status_code}")
-        return []
-
-def delete_non_successful_runs_for_repo(owner, repo):
-    """删除仓库中所有未成功的工作流运行记录"""
-    runs_url = f"https://api.github.com/repos/{owner}/{repo}/actions/runs"
+    """获取用户的所有仓库，支持分页"""
+    repos = []
     page = 1
     while True:
-        runs_response = requests.get(runs_url, headers=headers, params={'page': page, 'per_page': 100})
+        repos_url = f"https://api.github.com/users/{username}/repos?page={page}&per_page=100"
+        repos_response = requests.get(repos_url, headers=headers)
+        if repos_response.status_code == 200:
+            page_repos = repos_response.json()
+            if not page_repos:
+                break  # 如果没有更多的仓库，退出循环
+            repos.extend(page_repos)
+            page += 1
+        else:
+            print(f"Failed to fetch repositories for user {username}, status code: {repos_response.status_code}")
+            break
+    return repos
+
+def delete_non_successful_runs_for_repo(owner, repo):
+    """删除仓库中所有未成功的工作流运行记录，支持分页"""
+    page = 1
+    while True:
+        runs_url = f"https://api.github.com/repos/{owner}/{repo}/actions/runs?page={page}&per_page=100"
+        runs_response = requests.get(runs_url, headers=headers)
         if runs_response.status_code != 200:
             print(f"Failed to fetch workflow runs for repo {repo}, status code: {runs_response.status_code}")
             break
 
-        runs = runs_response.json().get('workflow_runs', [])
+        runs_data = runs_response.json()
+        runs = runs_data.get('workflow_runs', [])
         if not runs:
-            break  # 如果没有更多的运行记录，退出循环
+            break  # 没有更多的运行记录，退出循环
 
         for run in runs:
             if run['conclusion'] != 'success':
