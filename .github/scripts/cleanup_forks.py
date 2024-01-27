@@ -31,31 +31,37 @@ def get_forks():
 
 def merge_upstream(repo):
     """尝试合并上游仓库的改动"""
-    compare_url = f"{repo['parent']['url']}/compare/{repo['default_branch']}...{repo['owner']['login']}:{repo['default_branch']}"
-    compare_response = requests.get(compare_url, headers=headers)
-    if compare_response.status_code == 200 and compare_response.json()['status'] == 'identical':
-        print(f"{repo['full_name']} is up to date with upstream.")
-        return
-    elif compare_response.status_code == 200 and compare_response.json()['ahead_by'] > 0:
-        # Fork ahead of upstream, no merge needed
-        print(f"{repo['full_name']} is ahead of upstream, no merge needed.")
-        return
-    merge_url = f"{repo['url']}/merges"
-    merge_data = {
-        'base': repo['default_branch'],
-        'head': repo['parent']['default_branch'],
-        'commit_message': f"Merge upstream changes from {repo['parent']['full_name']} into {repo['default_branch']}"
-    }
-    merge_response = requests.post(merge_url, headers=headers, json=merge_data)
-    if merge_response.status_code in [200, 201]:
-        print(f"Successfully merged {repo['parent']['full_name']} into {repo['full_name']}")
+    # 首先检查'parent'键是否存在于仓库信息中
+    if 'parent' in repo:
+        compare_url = f"{repo['parent']['url']}/compare/{repo['default_branch']}...{repo['owner']['login']}:{repo['default_branch']}"
+        compare_response = requests.get(compare_url, headers=headers)
+        if compare_response.status_code == 200:
+            compare_data = compare_response.json()
+            if compare_data['status'] == 'identical':
+                print(f"{repo['full_name']} is up to date with upstream.")
+                return
+            elif compare_data['ahead_by'] > 0:
+                print(f"{repo['full_name']} is ahead of upstream, no merge needed.")
+                return
+            
+            merge_url = f"{repo['url']}/merges"
+            merge_data = {
+                'base': repo['default_branch'],
+                'head': f"{repo['parent']['owner']['login']}:{repo['parent']['default_branch']}",
+                'commit_message': f"Merge upstream changes from {repo['parent']['full_name']} into {repo['default_branch']}"
+            }
+            merge_response = requests.post(merge_url, headers=headers, json=merge_data)
+            if merge_response.status_code in [200, 201]:
+                print(f"Successfully merged {repo['parent']['full_name']} into {repo['full_name']}")
+            else:
+                error_message = merge_response.json().get('message', 'No error message')
+                print(f"Failed to merge {repo['parent']['full_name']} into {repo['full_name']}: {error_message}")
+                send_email(subject, body, ADMIN_EMAIL)
+        else:
+            print(f"Failed to compare {repo['full_name']} with upstream: HTTP status code {compare_response.status_code}")
     else:
-        error_message = merge_response.json().get('message', 'No error message')
-        print(f"Failed to merge {repo['parent']['full_name']} into {repo['full_name']}: {error_message}")
-        # Construct email content
-        subject = f"Merge conflict: {repo['full_name']}"
-        body = f"There was an error merging upstream changes from the fork at: {repo['html_url']}\n\nError message: {error_message}\n\nPlease check manually."
-        send_email(subject, body, ADMIN_EMAIL)
+        # 如果'parent'键不存在，输出提示信息
+        print(f"Repository '{repo['full_name']}' is not a fork or the 'parent' data is missing.")
 
 def send_email(subject, body, recipient):
     """发送电子邮件"""
