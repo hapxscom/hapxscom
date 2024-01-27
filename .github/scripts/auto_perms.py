@@ -10,13 +10,22 @@ USERNAME = os.getenv('USERNAME')
 base_url = 'https://api.github.com'
 
 def list_repositories(user):
-    """获取用户的所有仓库列表"""
-    repos_url = f"{base_url}/users/{user}/repos"
-    headers = CaseInsensitiveDict()
-    headers["Authorization"] = f"token {TOKEN}"
-    response = requests.get(repos_url, headers=headers)
-    response.raise_for_status()
-    return response.json()
+    """获取用户的所有仓库列表，并处理分页"""
+    all_repos = []
+    page = 1
+    while True:
+        repos_url = f"{base_url}/users/{user}/repos?page={page}&per_page=100"
+        headers = CaseInsensitiveDict()
+        headers["Authorization"] = f"token {TOKEN}"
+        response = requests.get(repos_url, headers=headers)
+        response.raise_for_status()
+        
+        repos = response.json()
+        if not repos:
+            break
+        all_repos.extend(repos)
+        page += 1
+    return all_repos
 
 def get_workflow_permissions(repo):
     """获取仓库的当前工作流权限"""
@@ -33,9 +42,7 @@ def set_workflow_permissions(repo, permission):
     headers = CaseInsensitiveDict()
     headers["Authorization"] = f"token {TOKEN}"
     headers["Accept"] = "application/vnd.github.v3+json"
-    data = {
-        "permission": permission
-    }
+    data = {"permission": permission}
     response = requests.put(permissions_url, headers=headers, json=data)
     response.raise_for_status()
     return response.json()
@@ -43,18 +50,22 @@ def set_workflow_permissions(repo, permission):
 def main():
     # 获取所有仓库
     repos = list_repositories(USERNAME)
+    print(f"Total repositories to check: {len(repos)}")
 
     # 遍历仓库
     for repo in repos:
-        permissions = get_workflow_permissions(repo)
-        # 检查工作流权限是否为可读写（write）
-        if permissions['enabled'] and permissions['allowed_actions'] != 'write':
-            # 输出当前权限和更新状态
-            print(f"Current permissions for repo {repo['name']}: {permissions['allowed_actions']}")
-            print(f"Updating permissions for repo: {repo['name']}")
-            set_workflow_permissions(repo, "write")
-        else:
-            print(f"Permissions for repo {repo['name']} are already set to read/write")
+        try:
+            permissions = get_workflow_permissions(repo)
+            # 检查工作流权限是否为可读写（write）
+            if permissions['enabled'] and permissions['allowed_actions'] != 'write':
+                # 输出当前权限和更新状态
+                print(f"Current permissions for repo {repo['name']}: {permissions['allowed_actions']}")
+                print(f"Updating permissions for repo: {repo['name']}")
+                set_workflow_permissions(repo, "write")
+            else:
+                print(f"Permissions for repo {repo['name']} are already set to read/write")
+        except requests.exceptions.RequestException as e:
+            print(f"Failed to process repo {repo['name']}: {e}")
 
 if __name__ == "__main__":
     main()

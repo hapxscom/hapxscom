@@ -2,25 +2,43 @@ import os
 import requests
 from datetime import datetime, timedelta
 import time
+import logging
+from requests.exceptions import RequestException
+
+# 设置日志记录
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # 从环境变量读取GitHub Token和GitHub用户名
 TOKEN = os.getenv('GH_TOKEN')
 USERNAME = os.getenv('USERNAME')
 
-# 设置请求头
-headers = {
+# 创建会话实例
+session = requests.Session()
+session.headers.update({
     'Authorization': f'token {TOKEN}',
     'Accept': 'application/vnd.github.v3+json'
-}
+})
+
+def api_request(method, url, **kwargs):
+    """
+    发送API请求并返回响应
+    """
+    try:
+        response = session.request(method, url, **kwargs)
+        response.raise_for_status()
+        return response
+    except RequestException as e:
+        logging.error(f"Request failed: {e}")
+        return None
 
 def delete_run(owner, repo, run_id):
     """删除指定的工作流运行记录"""
     delete_url = f"https://api.github.com/repos/{owner}/{repo}/actions/runs/{run_id}"
-    delete_response = requests.delete(delete_url, headers=headers)
-    if delete_response.status_code == 204:
-        print(f"Deleted run {run_id} from repo {repo}")
+    delete_response = api_request('DELETE', delete_url)
+    if delete_response and delete_response.status_code == 204:
+        logging.info(f"Deleted run {run_id} from repo {repo}")
     else:
-        print(f"Failed to delete run {run_id} from repo {repo}, status code: {delete_response.status_code}")
+        logging.error(f"Failed to delete run {run_id} from repo {repo}, status code: {delete_response.status_code}")
 
 def get_repos(username):
     """获取用户的所有仓库，支持分页"""
@@ -28,15 +46,15 @@ def get_repos(username):
     page = 1
     while True:
         repos_url = f"https://api.github.com/users/{username}/repos?page={page}&per_page=100"
-        repos_response = requests.get(repos_url, headers=headers)
-        if repos_response.status_code == 200:
+        repos_response = api_request('GET', repos_url)
+        if repos_response and repos_response.status_code == 200:
             page_repos = repos_response.json()
             if not page_repos:
                 break  # 如果没有更多的仓库，退出循环
             repos.extend(page_repos)
             page += 1
         else:
-            print(f"Failed to fetch repositories for user {username}, status code: {repos_response.status_code}")
+            logging.error(f"Failed to fetch repositories for user {username}, status code: {repos_response.status_code}")
             break
     return repos
 
@@ -45,55 +63,53 @@ def delete_non_successful_runs_for_repo(owner, repo):
     page = 1
     while True:
         runs_url = f"https://api.github.com/repos/{owner}/{repo}/actions/runs?page={page}&per_page=100"
-        runs_response = requests.get(runs_url, headers=headers)
-        if runs_response.status_code != 200:
-            print(f"Failed to fetch workflow runs for repo {repo}, status code: {runs_response.status_code}")
+        runs_response = api_request('GET', runs_url)
+        if runs_response and runs_response.status_code == 200:
+            runs_data = runs_response.json()
+            runs = runs_data.get('workflow_runs', [])
+            if not runs:
+                break  # 没有更多的运行记录，退出循环
+
+            for run in runs:
+                if run['conclusion'] != 'success':
+                    delete_run(owner, repo, run['id'])
+
+            page += 1  # 增加页码，获取下一页的数据
+        else:
+            logging.error(f"Failed to fetch workflow runs for repo {repo}, status code: {runs_response.status_code}")
             break
-
-        runs_data = runs_response.json()
-        runs = runs_data.get('workflow_runs', [])
-        if not runs:
-            break  # 没有更多的运行记录，退出循环
-
-        for run in runs:
-            if run['conclusion'] != 'success':
-                delete_run(owner, repo, run['id'])
-
-        page += 1  # 增加页码，获取下一页的数据
 
 def comment_on_pr(owner, repo, pr_number, body):
     """在指定的PR上发布评论"""
     comment_url = f"https://api.github.com/repos/{owner}/{repo}/issues/{pr_number}/comments"
-    response = requests.post(comment_url, headers=headers, json={'body': body})
-    if response.status_code == 201:
-        print(f"Commented on PR #{pr_number} in {owner}/{repo}")
+    response = api_request('POST', comment_url, json={'body': body})
+    if response and response.status_code == 201:
+        logging.info(f"Commented on PR #{pr_number} in {owner}/{repo}")
     else:
-        print(f"Failed to comment on PR #{pr_number} in {owner}/{repo}. Status code: {response.status_code}")
+        logging.error(f"Failed to comment on PR #{pr_number} in {owner}/{repo}, Status code: {response.status_code}")
 
 def process_dependabot_prs(owner, repo):
     """评论所有dependabot的open PR并在30秒后关闭没有更新的PR"""
     prs_url = f"https://api.github.com/repos/{owner}/{repo}/pulls"
-    response = requests.get(prs_url, headers=headers)
+    response = api_request('GET', prs_url)
 
-    if response.status_code == 200:
+    if response and response.status_code == 200:
         prs = response.json()
         for pr in prs:
             if pr['user']['login'] == 'dependabot[bot]':
                 comment_on_pr(owner, repo, pr['number'], "@dependabot rebase")
                 time.sleep(30)  # 给dependabot一些时间来回应评论
                 
-                # 重新获取PR信息来检查是否已经有更新
                 pr_url = f"https://api.github.com/repos/{owner}/{repo}/pulls/{pr['number']}"
-                pr_response = requests.get(pr_url, headers=headers)
-                if pr_response.status_code == 200:
+                pr_response = api_request('GET', pr_url)
+                if pr_response and pr_response.status_code == 200:
                     updated_pr = pr_response.json()
-                    # 如果PR在评论后30秒内没有更新，则关闭它
                     if updated_pr['updated_at'] <= pr['updated_at']:
                         close_pull_request(owner, repo, pr['number'])
                 else:
-                    print(f"Failed to get PR #{pr['number']} info from repo {repo}, status code: {pr_response.status_code}")
+                    logging.error(f"Failed to get PR #{pr['number']} info from repo {repo}, status code: {pr_response.status_code}")
     else:
-        print(f"Failed to get PRs from repo {repo}, status code: {response.status_code}")
+        logging.error(f"Failed to get PRs from repo {repo}, status code: {response.status_code}")
         
 def is_inactive(pr_last_updated_at):
     """判断PR是否未活动超过1天"""
@@ -103,30 +119,32 @@ def is_inactive(pr_last_updated_at):
 def close_pull_request(owner, repo, pr_number):
     """关闭指定的PR"""
     pr_url = f"https://api.github.com/repos/{owner}/{repo}/pulls/{pr_number}"
-    data = {'state': 'closed'}
-    response = requests.patch(pr_url, headers=headers, json=data)
-    if response.status_code == 200:
-        print(f"Closed PR #{pr_number} from repo {repo}")
+    response = api_request('PATCH', pr_url, json={'state': 'closed'})
+    if response and response.status_code == 200:
+        logging.info(f"Closed PR #{pr_number} from repo {repo}")
     else:
-        print(f"Failed to close PR #{pr_number} from repo {repo}, status code: {response.status_code}")
+        logging.error(f"Failed to close PR #{pr_number} from repo {repo}, status code: {response.status_code}")
 
 def close_inactive_pull_requests_for_repo(owner, repo):
     """关闭仓库中所有1天未活动的PR"""
     pulls_url = f"https://api.github.com/repos/{owner}/{repo}/pulls?state=open"
-    response = requests.get(pulls_url, headers=headers)
-    if response.status_code == 200:
+    response = api_request('GET', pulls_url)
+    if response and response.status_code == 200:
         pull_requests = response.json()
         for pr in pull_requests:
             if is_inactive(pr['updated_at']):
                 close_pull_request(owner, repo, pr['number'])
     else:
-        print(f"Failed to fetch pull requests for repo {repo}, status code: {response.status_code}")
+        logging.error(f"Failed to fetch pull requests for repo {repo}, status code: {response.status_code}")
 
 # 主逻辑
-repos = get_repos(USERNAME)
-for repo in repos:
-    repo_name = repo['name']
-    delete_non_successful_runs_for_repo(USERNAME, repo_name)
-    process_dependabot_prs(USERNAME, repo_name)
-    close_inactive_pull_requests_for_repo(USERNAME, repo_name)
-    
+def main():
+    repos = get_repos(USERNAME)
+    for repo in repos:
+        repo_name = repo['name']
+        delete_non_successful_runs_for_repo(USERNAME, repo_name)
+        process_dependabot_prs(USERNAME, repo_name)
+        close_inactive_pull_requests_for_repo(USERNAME, repo_name)
+
+if __name__ == "__main__":
+    main()
