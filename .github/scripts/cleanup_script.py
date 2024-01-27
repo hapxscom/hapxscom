@@ -1,6 +1,7 @@
 import os
 import requests
 from datetime import datetime, timedelta
+import time
 
 # 从环境变量读取GitHub Token和GitHub用户名
 TOKEN = os.getenv('GH_TOKEN')
@@ -51,6 +52,40 @@ def delete_non_successful_runs_for_repo(owner, repo):
 
         page += 1  # 增加页码，获取下一页的数据
 
+def comment_on_pr(owner, repo, pr_number, body):
+    """在指定的PR上发布评论"""
+    comment_url = f"https://api.github.com/repos/{owner}/{repo}/issues/{pr_number}/comments"
+    response = requests.post(comment_url, headers=headers, json={'body': body})
+    if response.status_code == 201:
+        print(f"Commented on PR #{pr_number} in {owner}/{repo}")
+    else:
+        print(f"Failed to comment on PR #{pr_number} in {owner}/{repo}. Status code: {response.status_code}")
+
+def process_dependabot_prs(owner, repo):
+    """评论所有dependabot的open PR并在30秒后关闭没有更新的PR"""
+    prs_url = f"https://api.github.com/repos/{owner}/{repo}/pulls"
+    response = requests.get(prs_url, headers=headers)
+
+    if response.status_code == 200:
+        prs = response.json()
+        for pr in prs:
+            if pr['user']['login'] == 'dependabot[bot]':
+                comment_on_pr(owner, repo, pr['number'], "@dependabot rebase")
+                time.sleep(30)  # 给dependabot一些时间来回应评论
+                
+                # 重新获取PR信息来检查是否已经有更新
+                pr_url = f"https://api.github.com/repos/{owner}/{repo}/pulls/{pr['number']}"
+                pr_response = requests.get(pr_url, headers=headers)
+                if pr_response.status_code == 200:
+                    updated_pr = pr_response.json()
+                    # 如果PR在评论后30秒内没有更新，则关闭它
+                    if updated_pr['updated_at'] <= pr['updated_at']:
+                        close_pull_request(owner, repo, pr['number'])
+                else:
+                    print(f"Failed to get PR #{pr['number']} info from repo {repo}, status code: {pr_response.status_code}")
+    else:
+        print(f"Failed to get PRs from repo {repo}, status code: {response.status_code}")
+        
 def is_inactive(pr_last_updated_at):
     """判断PR是否未活动超过1天"""
     last_updated_at = datetime.strptime(pr_last_updated_at, "%Y-%m-%dT%H:%M:%SZ")
@@ -79,9 +114,10 @@ def close_inactive_pull_requests_for_repo(owner, repo):
         print(f"Failed to fetch pull requests for repo {repo}, status code: {response.status_code}")
 
 # 主逻辑
-# 获取账户下的所有仓库
 repos = get_repos(USERNAME)
-# 对每个仓库中未成功的Actions进行删除和关闭1天未活动的PR
 for repo in repos:
-    delete_non_successful_runs_for_repo(USERNAME, repo['name'])
-    close_inactive_pull_requests_for_repo(USERNAME, repo['name'])
+    repo_name = repo['name']
+    delete_non_successful_runs_for_repo(USERNAME, repo_name)
+    process_dependabot_prs(USERNAME, repo_name)
+    close_inactive_pull_requests_for_repo(USERNAME, repo_name)
+    
