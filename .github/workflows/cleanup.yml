@@ -1,0 +1,30 @@
+name: Cleanup Non-Successful Runs
+
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    # 每天UTC时间00:00运行，你可以根据需要调整这个时间
+    - cron: "0 0 * * *"
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.x"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+      - name: Run cleanup script
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          USERNAME: "Happy-clo" # 替换成你的GitHub用户名
+        run: |
+          python .github/scripts/cleanup_script.py
