@@ -167,7 +167,7 @@ def close_inactive_pull_requests_for_repo(owner, repo):
         pull_requests = response.json()
         for pr in pull_requests:
             if is_inactive(pr['updated_at']) and not has_recent_activity(owner, repo, pr['number']):
-                close_pull_request(owner, repo, pr['number'])
+                close_pr(owner, repo, pr['number'])  # 使用 close_pr 而非 close_pull_request
     else:
         logging.error(f"Failed to fetch pull requests for repo {repo}, status code: {response.status_code}")
 
