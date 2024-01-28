@@ -61,19 +61,24 @@ def get_upstream_repo_info(repo):
 
 
 def create_pull_request(repo, token):
-    upstream_repo = get_upstream_repo_info(repo)
-    if not upstream_repo:
+    upstream_repo_info, upstream_repo_url = get_upstream_repo_info(repo)
+    if not upstream_repo_info:
         return
 
     repo_name = repo['name']
     fork_full_name = repo['full_name']
-    upstream_owner = upstream_repo['owner']['login']
-    upstream_branch = upstream_repo['default_branch']
+    # 确保 upstream_repo_info 是一个字典
+    if isinstance(upstream_repo_info, dict):
+        upstream_owner = upstream_repo_info['owner']['login']
+        upstream_branch = upstream_repo_info['default_branch']
+    else:
+        logging.error(f"仓库 {repo_name} 的上游仓库信息不正确。")
+        return
 
     headers = create_headers(token)
 
     pull_data = {
-        "title": f"从上游仓库 {upstream_repo['full_name']} 同步更新",
+        "title": f"从上游仓库 {upstream_repo_info['full_name']} 同步更新",
         "head": f"{upstream_owner}:{upstream_branch}",
         "base": repo['default_branch']  # 使用 fork 仓库的默认分支
     }
