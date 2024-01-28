@@ -23,24 +23,18 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests
           pip install PyGithub
-      - name: Run auto print actions
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          USERNAME: "Happy-clo" # 替换成你的GitHub用户名
-        run: |
-          python .github/scripts/check_actions.py
-      - name: Run cleanup forks
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          USERNAME: "Happy-clo" # 替换成你的GitHub用户名
-        run: |
-          python .github/scripts/cleanup_forks.py
       - name: Run cleanup script
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           USERNAME: "Happy-clo" # 替换成你的GitHub用户名
         run: |
           python .github/scripts/cleanup_script.py
+      - name: Run cleanup forks
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          USERNAME: "Happy-clo" # 替换成你的GitHub用户名
+        run: |
+          python .github/scripts/cleanup_forks.py
 
       - name: Run auto set perms
         env:
