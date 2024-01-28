@@ -48,9 +48,9 @@ def get_upstream_repo_info(repo):
     """
     if 'parent' in repo:
         parent_info = repo['parent']
-        # 检查是否存在 'owner' 键和 'html_url' 键
         if 'owner' in parent_info and 'html_url' in parent_info['owner']:
             upstream_repo_url = parent_info['owner']['html_url']
+            logging.info(f"找到上游仓库地址: {upstream_repo_url}")
             return parent_info, upstream_repo_url
         else:
             logging.warning(f"仓库 {repo['name']} 的上游仓库信息中缺少 'owner' 或 'html_url'。")
@@ -63,11 +63,13 @@ def get_upstream_repo_info(repo):
 def create_pull_request(repo, token):
     upstream_repo_info, upstream_repo_url = get_upstream_repo_info(repo)
     if not upstream_repo_info:
+        logging.warning(f"仓库 {repo['name']} 无法获取上游仓库信息。")
         return
 
     repo_name = repo['name']
     fork_full_name = repo['full_name']
-    # 确保 upstream_repo_info 是一个字典
+
+    # 此处确保 upstream_repo_info 是一个字典
     if isinstance(upstream_repo_info, dict):
         upstream_owner = upstream_repo_info['owner']['login']
         upstream_branch = upstream_repo_info['default_branch']
