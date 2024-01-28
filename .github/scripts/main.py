@@ -17,7 +17,7 @@ def main():
         return
 
     # 创建GitHub仓库管理器实例
-    manager = GitHubRepoManager(token)
+    manager = GitHubRepoManager()
 
     # 获取用户的所有仓库
     repos = manager.get_repos(username)
