@@ -6,7 +6,10 @@ import logging
 from requests.exceptions import RequestException
 
 # 设置日志记录
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, 
+                    format='%(asctime)s - %(levelname)s - %(message)s',
+                    handlers=[logging.FileHandler("github_automation.log"), logging.StreamHandler()])
+
 
 # 从环境变量读取GitHub Token和GitHub用户名
 base_url = 'https://api.github.com'
@@ -36,28 +39,40 @@ def api_request(method, url, max_retries=3, **kwargs):
         try:
             response = session.request(method, url, **kwargs)
             response.raise_for_status()
+
+            # 检查速率限制
+            if 'X-RateLimit-Remaining' in response.headers:
+                remaining = int(response.headers['X-RateLimit-Remaining'])
+                if remaining < 10:
+                    reset_time = int(response.headers.get('X-RateLimit-Reset', time.time() + 60))
+                    sleep_time = max(reset_time - time.time(), 3)  # 至少等待3秒
+                    logging.info(f"达到速率限制，暂停 {sleep_time} 秒")
+                    time.sleep(sleep_time)
+
             return response
         except RequestException as e:
             retries += 1
-            logging.error(f"Request failed: {e}, URL: {url}. Retry {retries}/{max_retries}")
+            logging.error(f"请求失败: {e}, URL: {url}. 重试 {retries}/{max_retries}")
+            if e.response:
+                logging.error(f"响应内容: {e.response.text}")
             time.sleep(2**retries)  # 指数退避
     return None
 
 def delete_run(owner, repo, run_id):
     """删除指定的工作流运行记录"""
-    delete_url = f"https://api.github.com/repos/{owner}/{repo}/actions/runs/{run_id}"
+    delete_url = f"{base_url}/repos/{owner}/{repo}/actions/runs/{run_id}"
     delete_response = api_request('DELETE', delete_url)
     if delete_response and delete_response.status_code == 204:
-        logging.info(f"Deleted run {run_id} from repo {repo}")
+        logging.info(f"从仓库 {repo} 删除运行记录 {run_id}")
     else:
-        logging.error(f"Failed to delete run {run_id} from repo {repo}")
+        logging.error(f"无法从仓库 {repo} 删除运行记录 {run_id}")
 
 def get_repos(username):
     """获取用户的所有仓库，支持分页"""
     repos = []
     page = 1
     while True:
-        repos_url = f"https://api.github.com/users/{username}/repos?page={page}&per_page=100"
+        repos_url = f"{base_url}/users/{username}/repos?page={page}&per_page=100"
         repos_response = api_request('GET', repos_url)
         if repos_response and repos_response.status_code == 200:
             page_repos = repos_response.json()
@@ -73,7 +88,7 @@ def delete_non_successful_runs_for_repo(owner, repo):
     """删除仓库中所有未成功的工作流运行记录，支持分页"""
     page = 1
     while True:
-        runs_url = f"https://api.github.com/repos/{owner}/{repo}/actions/runs?page={page}&per_page=100"
+        runs_url = f"{base_url}/repos/{owner}/{repo}/actions/runs?page={page}&per_page=100"
         runs_response = api_request('GET', runs_url)
         if runs_response and runs_response.status_code == 200:
             runs_data = runs_response.json()
@@ -88,23 +103,24 @@ def delete_non_successful_runs_for_repo(owner, repo):
             page += 1  # 增加页码，获取下一页的数据
         else:
             break
+
 def comment_on_pr(owner, repo, pr_number, body):
     """在指定的PR上发布评论"""
     comment_url = f"{base_url}/repos/{owner}/{repo}/issues/{pr_number}/comments"
     response = api_request('POST', comment_url, json={'body': body})
     if response and response.status_code == 201:
-        logging.info(f"Commented on PR #{pr_number} in {owner}/{repo}")
+        logging.info(f"在 {owner}/{repo} 的PR #{pr_number} 上发表评论")
     else:
-        logging.error(f"Failed to comment on PR #{pr_number} in {owner}/{repo}")
+        logging.error(f"无法在 {owner}/{repo} 的PR #{pr_number} 上发表评论")
 
 def close_pr(owner, repo, pr_number):
     """关闭指定的PR"""
     close_url = f"{base_url}/repos/{owner}/{repo}/pulls/{pr_number}"
     response = api_request('PATCH', close_url, json={'state': 'closed'})
     if response and response.status_code == 200:
-        logging.info(f"Closed PR #{pr_number} in {owner}/{repo}")
+        logging.info(f"关闭了 {owner}/{repo} 的PR #{pr_number}")
     else:
-        logging.error(f"Failed to close PR #{pr_number} in {owner}/{repo}")
+        logging.error(f"无法关闭 {owner}/{repo} 的PR #{pr_number}")
 
 def process_dependabot_prs(owner, repo):
     """处理指定仓库中由dependabot创建的PR"""
@@ -125,7 +141,7 @@ def process_dependabot_prs(owner, repo):
                     # 如果PR超过30天没有更新，则关闭PR
                     close_pr(owner, repo, pr['number'])
     else:
-        logging.error(f"Failed to get PRs from repo {repo}")
+        logging.error(f"无法从仓库 {repo} 获取PRs")
 
 
 def is_inactive(updated_at):
@@ -167,9 +183,10 @@ def close_inactive_pull_requests_for_repo(owner, repo):
         pull_requests = response.json()
         for pr in pull_requests:
             if is_inactive(pr['updated_at']) and not has_recent_activity(owner, repo, pr['number']):
-                close_pr(owner, repo, pr['number'])  # 使用 close_pr 而非 close_pull_request
+                close_pr(owner, repo, pr['number'])
+                logging.info(f"由于长时间无活动，关闭了 {owner}/{repo} 的PR #{pr['number']}")
     else:
-        logging.error(f"Failed to fetch pull requests for repo {repo}, status code: {response.status_code}")
+        logging.error(f"无法获取 {owner}/{repo} 的开放PR列表，状态码: {response.status_code}")
 
 def main():
     if not TOKEN or not USERNAME:
