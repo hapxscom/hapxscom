@@ -6,10 +6,8 @@ from requests.structures import CaseInsensitiveDict
 base_url = 'https://api.github.com'
 
 # 使用环境变量来获取GitHub Token和用户名
-# TOKEN = os.getenv('GH_TOKEN')
-# USERNAME = os.getenv('USERNAME')
-TOKEN = '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'
-USERNAME = 'Happy-clo'
+TOKEN = os.getenv('GH_TOKEN')
+USERNAME = os.getenv('USERNAME')
 
 def list_repositories(user):
     """获取用户的所有仓库列表，并处理分页"""

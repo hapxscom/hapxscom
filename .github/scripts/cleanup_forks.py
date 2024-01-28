@@ -1,81 +1,77 @@
 import os
 import requests
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.header import Header
+from requests.exceptions import HTTPError
 
-# 从环境变量读取GitHub Token和邮件服务器信息
-TOKEN = os.getenv('GH_TOKEN')
-EMAIL_HOST = os.getenv('EMAIL_HOST')
-EMAIL_PORT = int(os.getenv('EMAIL_PORT'))
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
-ADMIN_EMAIL = 'admin@wdsj.one'
+def get_github_token():
+    # 从环境变量中获取GitHub Token
+    return os.getenv('GH_TOKEN')
 
-# 设置请求头
-headers = {
-    'Authorization': f'token {TOKEN}',
-    'Accept': 'application/vnd.github.v3+json'
-}
+def get_github_username():
+    # 从环境变量中获取GitHub用户名
+    return os.getenv('USERNAME')
 
-def get_forks():
-    """获取用户的所有fork仓库"""
-    url = 'https://api.github.com/user/repos?type=forks'
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
-        return response.json()
-    else:
-        print(f"Failed to fetch repositories, HTTP status code: {response.status_code}")
-        return []
+def get_repositories(username, token):
+    # 获取用户的所有仓库
+    page = 1
+    headers = {
+        "Authorization": f"token {token}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+    while True:
+        url = f"https://api.github.com/users/{username}/repos?type=all&per_page=100&page={page}"
+        try:
+            response = requests.get(url, headers=headers)
+            response.raise_for_status()
+            repos = response.json()
+            if not repos:
+                break
+            for repo in repos:
+                yield repo
+            page += 1
+        except HTTPError as http_err:
+            print(f"HTTP error occurred: {http_err}")
+            break
+        except Exception as err:
+            print(f"Other error occurred: {err}")
+            break
 
-def merge_upstream(repo):
-    """尝试合并上游仓库的改动"""
-    # 首先检查'parent'键是否存在于仓库信息中
-    if 'parent' in repo:
-        compare_url = f"{repo['parent']['url']}/compare/{repo['default_branch']}...{repo['owner']['login']}:{repo['default_branch']}"
-        compare_response = requests.get(compare_url, headers=headers)
-        if compare_response.status_code == 200:
-            compare_data = compare_response.json()
-            if compare_data['status'] == 'identical':
-                print(f"{repo['full_name']} is up to date with upstream.")
-                return
-            elif compare_data['ahead_by'] > 0:
-                print(f"{repo['full_name']} is ahead of upstream, no merge needed.")
-                return
-            
-            merge_url = f"{repo['url']}/merges"
-            merge_data = {
-                'base': repo['default_branch'],
-                'head': f"{repo['parent']['owner']['login']}:{repo['parent']['default_branch']}",
-                'commit_message': f"Merge upstream changes from {repo['parent']['full_name']} into {repo['default_branch']}"
-            }
-            merge_response = requests.post(merge_url, headers=headers, json=merge_data)
-            if merge_response.status_code in [200, 201]:
-                print(f"Successfully merged {repo['parent']['full_name']} into {repo['full_name']}")
-            else:
-                error_message = merge_response.json().get('message', 'No error message')
-                print(f"Failed to merge {repo['parent']['full_name']} into {repo['full_name']}: {error_message}")
-                send_email(subject, body, ADMIN_EMAIL)
-        else:
-            print(f"Failed to compare {repo['full_name']} with upstream: HTTP status code {compare_response.status_code}")
-    else:
-        # 如果'parent'键不存在，输出提示信息
-        print(f"Repository '{repo['full_name']}' is not a fork or the 'parent' data is missing.")
+def create_pull_request(repo, token):
+    # 为Fork的仓库创建拉取请求
+    repo_name = repo['name']
+    fork_full_name = repo['full_name']
+    upstream_branch = "master"  # 或者根据需要选择分支
 
-def send_email(subject, body, recipient):
-    """发送电子邮件"""
-    message = MIMEMultipart()
-    message['From'] = Header(EMAIL_HOST_USER)
-    message['To'] = Header(recipient)
-    message['Subject'] = Header(subject)
-    message.attach(MIMEText(body, 'plain', 'utf-8'))
-    with smtplib.SMTP_SSL(EMAIL_HOST, EMAIL_PORT) as server:
-        server.login(EMAIL_HOST_USER, EMAIL_HOST_PASSWORD)
-        server.sendmail(EMAIL_HOST_USER, recipient, message.as_string())
-        print(f"Email sent to {recipient} with subject: {subject}")
+    headers = {
+        "Authorization": f"token {token}",
+        "Accept": "application/vnd.github.v3+json"
+    }
 
-# 主逻辑
-forks = get_forks()
-for fork in forks:
-    merge_upstream(fork)
+    pull_data = {
+        "title": f"更新从 {repo['parent']['full_name']}",
+        "head": f"{repo['parent']['owner']['login']}:{upstream_branch}",
+        "base": "master"
+    }
+
+    try:
+        response = requests.post(f"https://api.github.com/repos/{fork_full_name}/pulls", json=pull_data, headers=headers)
+        response.raise_for_status()
+        print(f"成功创建拉取请求: {response.json()['html_url']}")
+    except HTTPError as http_err:
+        print(f"HTTP error occurred while creating pull request for {repo_name}: {http_err}")
+    except Exception as err:
+        print(f"Other error occurred: {err}")
+
+def main():
+    token = get_github_token()
+    username = get_github_username()
+    if not token or not username:
+        print("GitHub Token或用户名未设置。")
+        return
+
+    for repo in get_repositories(username, token):
+        print(f"仓库名称: {repo['name']}, 是否 Fork: {repo['fork']}")
+        if repo['fork'] and 'parent' in repo:
+            create_pull_request(repo, token)
+
+if __name__ == "__main__":
+    main()
