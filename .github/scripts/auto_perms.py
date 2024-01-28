@@ -4,7 +4,9 @@ import logging
 from requests.structures import CaseInsensitiveDict
 
 # 设置日志记录
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, 
+                    format='%(asctime)s - %(levelname)s - %(message)s',
+                    handlers=[logging.FileHandler("github_automation.log"), logging.StreamHandler()])
 
 # GitHub API URL
 base_url = 'https://api.github.com'
@@ -35,7 +37,7 @@ def list_repositories(user):
             all_repos.extend(repos)
             page += 1
         except requests.exceptions.RequestException as e:
-            logging.error(f"Failed to list repositories: {e}")
+            logging.error(f"无法列出仓库: {e}")
             break
     return all_repos
 
@@ -48,12 +50,12 @@ def get_workflow_permissions(repo):
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
-        logging.error(f"Failed to get workflow permissions for repo {repo['name']}: {e}")
+        logging.error(f"无法获取仓库 {repo['name']} 的工作流权限: {e}")
 
 def set_workflow_permissions(repo, permission):
     """设置仓库的工作流权限"""
     if permission == "all":
-        logging.info(f"Repo {repo['name']} workflow permissions already set to 'all'.")
+        logging.info(f"仓库 {repo['name']} 的工作流权限已设置为 'all'.")
         return
 
     permissions_url = f"{base_url}/repos/{USERNAME}/{repo['name']}/actions/permissions"
@@ -63,18 +65,18 @@ def set_workflow_permissions(repo, permission):
     try:
         response = requests.put(permissions_url, headers=headers, json=data)
         response.raise_for_status()
-        logging.info(f"Updated workflow permissions for repo {repo['name']}")
+        logging.info(f"已更新仓库 {repo['name']} 的工作流权限")
     except requests.exceptions.RequestException as e:
-        logging.error(f"Failed to set workflow permissions for repo {repo['name']}: {e}")
+        logging.error(f"无法设置仓库 {repo['name']} 的工作流权限: {e}")
 
 def main():
     repos = list_repositories(USERNAME)
-    logging.info(f"Total repositories to check: {len(repos)}")
+    logging.info(f"需要检查的仓库总数: {len(repos)}")
 
     for repo in repos:
         permissions = get_workflow_permissions(repo)
         if permissions and permissions.get('enabled', False) and permissions.get('allowed_actions', '') != 'all':
-            logging.info(f"Updating permissions to 'all' for repo: {repo['name']}")
+            logging.info(f"正在将仓库: {repo['name']} 的权限更新为 'all'")
             set_workflow_permissions(repo, "all")
 
 if __name__ == "__main__":
