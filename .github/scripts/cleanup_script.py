@@ -189,8 +189,8 @@ def close_inactive_pull_requests_for_repo(owner, repo):
     else:
         logging.error(f"无法获取 {owner}/{repo} 的开放PR列表，状态码: {response.status_code}")
 
-def get_workflow_runs(repo, criteria=None, page=1, per_page=10):
-    """获取仓库中符合特定条件的工作流运行ID列表"""
+def get_workflow_runs(repo, workflow_id=None, page=1, per_page=10):
+    """获取仓库中特定工作流的运行ID列表"""
     headers = {
         'Authorization': f'token {TOKEN}',
         'Accept': 'application/vnd.github.v3+json'
@@ -201,11 +201,8 @@ def get_workflow_runs(repo, criteria=None, page=1, per_page=10):
         response = requests.get(workflows_url, headers=headers)
         if response.status_code == 200:
             runs = response.json()['workflow_runs']
-            # 应用条件筛选（如果有），并提取ID
-            if criteria:
-                workflow_ids = [run['id'] for run in runs if criteria(run)]
-            else:
-                workflow_ids = [run['id'] for run in runs]
+            # 筛选特定工作流的运行
+            workflow_ids = [run['id'] for run in runs if run['workflow_id'] == workflow_id]
             return workflow_ids
         else:
             logging.error(f"获取仓库 '{repo.name}' 的工作流运行失败。状态码：{response.status_code}, 响应内容：{response.text}")
@@ -247,10 +244,15 @@ def main():
         # 获取仓库中的所有工作流
         workflows = repo.get_workflows()
 
-        # 遍历每个工作流，检查名称并删除相应的工作流
         for workflow in workflows:
+            # 检查工作流名称
             if workflow.name == "Upstream Sync":
-                delete_workflow(repo, workflow.id)
+                # 获取符合条件的工作流运行ID
+                workflow_ids = get_workflow_runs(repo, criteria=lambda run: run['workflow_id'] == workflow.id)
+
+                # 删除这些工作流运行
+                for workflow_id in workflow_ids:
+                    delete_workflow(repo, workflow_id)
 
         # 处理PRs和工作流运行记录
         delete_non_successful_runs_for_repo(owner, repo_name)
