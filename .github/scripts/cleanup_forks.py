@@ -44,13 +44,21 @@ def get_repositories(username, token):
             
 def get_upstream_repo_info(repo):
     """
-    从仓库信息中提取上游仓库信息
+    从仓库信息中提取上游仓库信息，包括上游仓库的地址。
     """
     if 'parent' in repo:
-        return repo['parent']
+        parent_info = repo['parent']
+        # 检查是否存在 'owner' 键和 'html_url' 键
+        if 'owner' in parent_info and 'html_url' in parent_info['owner']:
+            upstream_repo_url = parent_info['owner']['html_url']
+            return parent_info, upstream_repo_url
+        else:
+            logging.warning(f"仓库 {repo['name']} 的上游仓库信息中缺少 'owner' 或 'html_url'。")
+            return parent_info, None
     else:
         logging.warning(f"仓库 {repo['name']} 没有上游仓库信息。")
-        return None
+        return None, None
+
 
 def create_pull_request(repo, token):
     upstream_repo = get_upstream_repo_info(repo)
