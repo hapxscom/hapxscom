@@ -189,27 +189,37 @@ def close_inactive_pull_requests_for_repo(owner, repo):
     else:
         logging.error(f"无法获取 {owner}/{repo} 的开放PR列表，状态码: {response.status_code}")
 
-def get_workflow_runs(repo, workflow_id=None, page=1, per_page=10):
-    """获取仓库中特定工作流的运行ID列表"""
+def get_workflow_runs(repo, workflow_id=None, per_page=100):
+    """获取仓库中特定工作流的所有运行ID列表，遍历所有页面"""
     headers = {
         'Authorization': f'token {TOKEN}',
         'Accept': 'application/vnd.github.v3+json'
     }
-    workflows_url = f"{base_url}/repos/{repo.owner.login}/{repo.name}/actions/runs?page={page}&per_page={per_page}"
+    workflow_ids = []
+    page = 1
 
-    try:
-        response = requests.get(workflows_url, headers=headers)
-        if response.status_code == 200:
-            runs = response.json()['workflow_runs']
-            # 筛选特定工作流的运行
-            workflow_ids = [run['id'] for run in runs if run['workflow_id'] == workflow_id]
-            return workflow_ids
-        else:
-            logging.error(f"获取仓库 '{repo.name}' 的工作流运行失败。状态码：{response.status_code}, 响应内容：{response.text}")
-            return []
-    except Exception as e:
-        logging.error(f"获取仓库 '{repo.name}' 的工作流运行时出错：{e}")
-        return []
+    while True:
+        workflows_url = f"{base_url}/repos/{repo.owner.login}/{repo.name}/actions/runs?page={page}&per_page={per_page}"
+        try:
+            response = requests.get(workflows_url, headers=headers)
+            if response.status_code == 200:
+                runs = response.json()['workflow_runs']
+                # 筛选特定工作流的运行
+                filtered_runs = [run['id'] for run in runs if run['workflow_id'] == workflow_id]
+                workflow_ids.extend(filtered_runs)
+
+                # 检查是否还有更多页面
+                if 'next' not in response.links:
+                    break
+                page += 1
+            else:
+                logging.error(f"获取仓库 '{repo.name}' 的工作流运行失败。状态码：{response.status_code}, 响应内容：{response.text}")
+                break
+        except Exception as e:
+            logging.error(f"获取仓库 '{repo.name}' 的工作流运行时出错：{e}")
+            break
+
+    return workflow_ids
 
 def delete_workflow(repo, workflow_id):
     """删除指定仓库中的特定工作流"""
