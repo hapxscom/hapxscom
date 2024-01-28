@@ -189,13 +189,13 @@ def close_inactive_pull_requests_for_repo(owner, repo):
     else:
         logging.error(f"无法获取 {owner}/{repo} 的开放PR列表，状态码: {response.status_code}")
 
-def get_workflow_runs(repo, workflow_id=None, per_page=100):
-    """获取仓库中特定工作流的所有运行ID列表，遍历所有页面"""
+def get_workflow_runs(repo, per_page=100):
+    """获取仓库中的所有工作流运行的详细信息，遍历所有页面"""
     headers = {
         'Authorization': f'token {TOKEN}',
         'Accept': 'application/vnd.github.v3+json'
     }
-    workflow_ids = []
+    runs_data = []
     page = 1
 
     while True:
@@ -204,11 +204,8 @@ def get_workflow_runs(repo, workflow_id=None, per_page=100):
             response = requests.get(workflows_url, headers=headers)
             if response.status_code == 200:
                 runs = response.json()['workflow_runs']
-                # 筛选特定工作流的运行
-                filtered_runs = [run['id'] for run in runs if run['workflow_id'] == workflow_id]
-                workflow_ids.extend(filtered_runs)
+                runs_data.extend(runs)
 
-                # 检查是否还有更多页面
                 if 'next' not in response.links:
                     break
                 page += 1
@@ -219,7 +216,7 @@ def get_workflow_runs(repo, workflow_id=None, per_page=100):
             logging.error(f"获取仓库 '{repo.name}' 的工作流运行时出错：{e}")
             break
 
-    return workflow_ids
+    return runs_data
 
 def delete_workflow(repo, workflow_id):
     """删除指定仓库中的特定工作流"""
@@ -248,25 +245,20 @@ def main():
     repos = user.get_repos()
 
     for repo in repos:
-        repo_name = repo.name
-        owner = repo.owner.login
+        # 获取该仓库所有工作流运行的详细信息
+        all_runs = get_workflow_runs(repo)
 
-        # 获取仓库中的所有工作流
-        workflows = repo.get_workflows()
+        # 按工作流名称分组，并保留每个名称的最新运行
+        latest_runs = {}
+        for run in all_runs:
+            workflow_name = run['name']
+            if workflow_name not in latest_runs or latest_runs[workflow_name]['created_at'] < run['created_at']:
+                latest_runs[workflow_name] = run
 
-        for workflow in workflows:
-            if workflow.name == "Upstream Sync":
-                # 获取符合特定工作流的运行ID
-                workflow_ids = get_workflow_runs(repo, workflow_id=workflow.id)
-
-                # 删除这些工作流运行
-                for workflow_id in workflow_ids:
-                    delete_workflow(repo, workflow_id)
-
-        # 处理PRs和工作流运行记录
-        delete_non_successful_runs_for_repo(owner, repo_name)
-        process_dependabot_prs(owner, repo_name)
-        close_inactive_pull_requests_for_repo(owner, repo_name)
-
+        # 删除除最新之外的所有运行
+        for run in all_runs:
+            if run['id'] != latest_runs[run['name']]['id']:
+                delete_workflow(repo, run['id'])
+                
 if __name__ == "__main__":
     main()

@@ -28,7 +28,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           USERNAME: "Happy-clo" # 替换成你的GitHub用户名
         run: |
-          python .github/scripts/cleanup_script.py
+          python .github/scripts/main.py
       - name: Run cleanup forks
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
