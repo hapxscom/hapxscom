@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 import time
 import logging
 from requests.exceptions import RequestException
+from github import Github
 
 # 设置日志记录
 logging.basicConfig(level=logging.INFO, 
@@ -188,17 +189,45 @@ def close_inactive_pull_requests_for_repo(owner, repo):
     else:
         logging.error(f"无法获取 {owner}/{repo} 的开放PR列表，状态码: {response.status_code}")
 
+def delete_workflow(repo, workflow_id):
+    """删除指定仓库中的特定工作流"""
+    headers = {
+        'Authorization': f'token {TOKEN}',
+        'Accept': 'application/vnd.github.v3+json'
+    }
+    delete_workflow_url = f"{base_url}/repos/{repo.owner.login}/{repo.name}/actions/workflows/{workflow_id}"
+    try:
+        response = session.delete(delete_workflow_url, headers=headers)
+        if response.status_code == 204:
+            logger.info(f"已成功删除仓库 '{repo.name}' 中ID为 '{workflow_id}' 的工作流。")
+        else:
+            logger.error(f"尝试删除仓库 '{repo.name}' 中ID为 '{workflow_id}' 的工作流失败。状态码：{response.status_code}")
+    except Exception as e:
+        logger.error(f"删除仓库 '{repo.name}' 中ID为 '{workflow_id}' 的工作流时出错：{e}")
+
 def main():
     if not TOKEN or not USERNAME:
-        logging.error("GitHub Token或用户名未设置。")
+        logger.error("GitHub Token或用户名未设置。")
         return
 
-    repos = get_repos(USERNAME)
+    g = Github(TOKEN)
+    user = g.get_user(USERNAME)
+    repos = user.get_repos()
+
     for repo in repos:
-        repo_name = repo['name']
-        delete_non_successful_runs_for_repo(USERNAME, repo_name)
-        process_dependabot_prs(USERNAME, repo_name)
-        close_inactive_pull_requests_for_repo(USERNAME, repo_name)
+        repo_name = repo.name
+        owner = repo.owner.login
+
+        # 删除特定工作流
+        workflows = repo.get_workflows()
+        for workflow in workflows:
+            if workflow.name == "Upstream Sync":
+                delete_workflow(repo, workflow.id)
+
+        # 处理PRs和工作流运行记录
+        delete_non_successful_runs_for_repo(owner, repo_name)
+        process_dependabot_prs(owner, repo_name)
+        close_inactive_pull_requests_for_repo(owner, repo_name)
 
 if __name__ == "__main__":
     main()
