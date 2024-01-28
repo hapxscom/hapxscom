@@ -9,6 +9,7 @@ from requests.exceptions import RequestException
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # 从环境变量读取GitHub Token和GitHub用户名
+base_url = 'https://api.github.com'
 TOKEN = os.getenv('GH_TOKEN')
 USERNAME = os.getenv('USERNAME')
 DEPENDABOT_WAIT_TIME = int(os.getenv('DEPENDABOT_WAIT_TIME', '30'))  # 默认等待时间为30秒
