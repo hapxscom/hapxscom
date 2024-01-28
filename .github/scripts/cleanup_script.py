@@ -82,17 +82,38 @@ def delete_non_successful_runs_for_repo(owner, repo):
         else:
             break
 def comment_on_pr(owner, repo, pr_number, body):
-    """在指定的PR上发布评论，除非PR在过去2天内有评论或活动"""
-    if has_recent_activity(owner, repo, pr_number):
-        logging.info(f"Skipping commenting on PR #{pr_number} in {owner}/{repo} due to recent activity")
-        return
-
+    """在指定的PR上发布评论"""
     comment_url = f"{base_url}/repos/{owner}/{repo}/issues/{pr_number}/comments"
     response = api_request('POST', comment_url, json={'body': body})
     if response and response.status_code == 201:
         logging.info(f"Commented on PR #{pr_number} in {owner}/{repo}")
     else:
         logging.error(f"Failed to comment on PR #{pr_number} in {owner}/{repo}")
+
+def process_dependabot_prs(owner, repo):
+    """处理指定仓库中由dependabot创建的PR"""
+    prs_url = f"{base_url}/repos/{owner}/{repo}/pulls"
+    response = api_request('GET', prs_url)
+    if response and response.status_code == 200:
+        prs = response.json()
+        for pr in prs:
+            if pr['user']['login'] == 'dependabot[bot]':
+                # 检查 PR 是否落后于目标分支
+                if pr['mergeable_state'] == 'behind':
+                    # 指示 Dependabot 更新 PR
+                    comment_on_pr(owner, repo, pr['number'], "@dependabot rebase")
+
+                # 检查 PR 是否打开了很长时间（例如超过30天）
+                pr_created_at = datetime.strptime(pr['created_at'], '%Y-%m-%dT%H:%M:%SZ')
+                if datetime.now() - pr_created_at > timedelta(days=30):
+                    # 可以选择关闭PR或采取其他操作
+                    logging.info(f"Closing old dependabot PR #{pr['number']} in {owner}/{repo}")
+                    # close_pull_request(owner, repo, pr['number']) # 如果需要关闭PR
+
+                # 添加标签（如果需要）
+                # add_labels_to_pr(owner, repo, pr['number'], ['dependabot']) # 示例：添加标签函数
+    else:
+        logging.error(f"Failed to get PRs from repo {repo}")
 
 def is_inactive(updated_at):
     """判断PR是否不活跃（默认2天未活动）"""
