@@ -81,10 +81,13 @@ def delete_non_successful_runs_for_repo(owner, repo):
             page += 1  # 增加页码，获取下一页的数据
         else:
             break
-
 def comment_on_pr(owner, repo, pr_number, body):
-    """在指定的PR上发布评论"""
-    comment_url = f"https://api.github.com/repos/{owner}/{repo}/issues/{pr_number}/comments"
+    """在指定的PR上发布评论，除非PR在过去2天内有评论或活动"""
+    if has_recent_activity(owner, repo, pr_number):
+        logging.info(f"Skipping commenting on PR #{pr_number} in {owner}/{repo} due to recent activity")
+        return
+
+    comment_url = f"{base_url}/repos/{owner}/{repo}/issues/{pr_number}/comments"
     response = api_request('POST', comment_url, json={'body': body})
     if response and response.status_code == 201:
         logging.info(f"Commented on PR #{pr_number} in {owner}/{repo}")
@@ -92,51 +95,46 @@ def comment_on_pr(owner, repo, pr_number, body):
         logging.error(f"Failed to comment on PR #{pr_number} in {owner}/{repo}")
 
 def is_inactive(updated_at):
-    """判断PR是否不活跃（默认1天未活动）"""
-    inactive_time = datetime.now() - timedelta(days=1)
+    """判断PR是否不活跃（默认2天未活动）"""
+    inactive_time = datetime.now() - timedelta(days=2)
     pr_last_updated = datetime.strptime(updated_at, '%Y-%m-%dT%H:%M:%SZ')
     return pr_last_updated < inactive_time
 
-def close_pull_request(owner, repo, pr_number):
-    """关闭指定的PR"""
-    pr_url = f"https://api.github.com/repos/{owner}/{repo}/pulls/{pr_number}"
-    response = api_request('PATCH', pr_url, json={'state': 'closed'})
-    if response and response.status_code == 200:
-        logging.info(f"Closed PR #{pr_number} in {owner}/{repo}")
-    else:
-        logging.error(f"Failed to close PR #{pr_number} in {owner}/{repo}")
+def has_recent_activity(owner, repo, pr_number):
+    """检查PR在过去2天内是否有评论或活动"""
+    comments_url = f"{base_url}/repos/{owner}/{repo}/issues/{pr_number}/comments"
+    events_url = f"{base_url}/repos/{owner}/{repo}/issues/{pr_number}/events"
+    headers = create_headers()
+    two_days_ago = datetime.now() - timedelta(days=2)
+    
+    # 检查评论
+    comments_response = api_request('GET', comments_url, headers=headers)
+    if comments_response and comments_response.status_code == 200:
+        comments = comments_response.json()
+        for comment in comments:
+            comment_date = datetime.strptime(comment['created_at'], '%Y-%m-%dT%H:%M:%SZ')
+            if comment_date > two_days_ago:
+                return True
+    
+    # 检查事件
+    events_response = api_request('GET', events_url, headers=headers)
+    if events_response and events_response.status_code == 200:
+        events = events_response.json()
+        for event in events:
+            event_date = datetime.strptime(event['created_at'], '%Y-%m-%dT%H:%M:%SZ')
+            if event_date > two_days_ago:
+                return True
 
-def process_dependabot_prs(owner, repo):
-    """评论所有dependabot的open PR并在30秒后关闭没有更新的PR"""
-    prs_url = f"https://api.github.com/repos/{owner}/{repo}/pulls"
-    response = api_request('GET', prs_url)
-
-    if response and response.status_code == 200:
-        prs = response.json()
-        for pr in prs:
-            if pr['user']['login'] == 'dependabot[bot]':
-                comment_on_pr(owner, repo, pr['number'], "@dependabot rebase")
-                time.sleep(DEPENDABOT_WAIT_TIME)  # 给dependabot一些时间来回应评论
-                
-                pr_url = f"https://api.github.com/repos/{owner}/{repo}/pulls/{pr['number']}"
-                pr_response = api_request('GET', pr_url)
-                if pr_response and pr_response.status_code == 200:
-                    updated_pr = pr_response.json()
-                    if updated_pr['updated_at'] <= pr['updated_at']:
-                        close_pull_request(owner, repo, pr['number'])
-                else:
-                    logging.error(f"Failed to get PR #{pr['number']} info from repo {repo}")
-    else:
-        logging.error(f"Failed to get PRs from repo {repo}")
+    return False
 
 def close_inactive_pull_requests_for_repo(owner, repo):
-    """关闭仓库中所有1天未活动的PR"""
-    pulls_url = f"https://api.github.com/repos/{owner}/{repo}/pulls?state=open"
+    """关闭仓库中所有2天未活动的PR"""
+    pulls_url = f"{base_url}/repos/{owner}/{repo}/pulls?state=open"
     response = api_request('GET', pulls_url)
     if response and response.status_code == 200:
         pull_requests = response.json()
         for pr in pull_requests:
-            if is_inactive(pr['updated_at']):
+            if is_inactive(pr['updated_at']) and not has_recent_activity(owner, repo, pr['number']):
                 close_pull_request(owner, repo, pr['number'])
     else:
         logging.error(f"Failed to fetch pull requests for repo {repo}, status code: {response.status_code}")
