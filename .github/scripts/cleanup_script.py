@@ -199,15 +199,15 @@ def delete_workflow(repo, workflow_id):
     try:
         response = session.delete(delete_workflow_url, headers=headers)
         if response.status_code == 204:
-            logger.info(f"已成功删除仓库 '{repo.name}' 中ID为 '{workflow_id}' 的工作流。")
+            logging.info(f"已成功删除仓库 '{repo.name}' 中ID为 '{workflow_id}' 的工作流。")
         else:
-            logger.error(f"尝试删除仓库 '{repo.name}' 中ID为 '{workflow_id}' 的工作流失败。状态码：{response.status_code}")
+            logging.error(f"尝试删除仓库 '{repo.name}' 中ID为 '{workflow_id}' 的工作流失败。状态码：{response.status_code}")
     except Exception as e:
-        logger.error(f"删除仓库 '{repo.name}' 中ID为 '{workflow_id}' 的工作流时出错：{e}")
+        logging.error(f"删除仓库 '{repo.name}' 中ID为 '{workflow_id}' 的工作流时出错：{e}")
 
 def main():
     if not TOKEN or not USERNAME:
-        logger.error("GitHub Token或用户名未设置。")
+        logging.error("GitHub Token或用户名未设置。")
         return
 
     g = Github(TOKEN)
