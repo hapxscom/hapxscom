@@ -245,10 +245,9 @@ def main():
         workflows = repo.get_workflows()
 
         for workflow in workflows:
-            # 检查工作流名称
             if workflow.name == "Upstream Sync":
-                # 获取符合条件的工作流运行ID
-                workflow_ids = get_workflow_runs(repo, criteria=lambda run: run['workflow_id'] == workflow.id)
+                # 获取符合特定工作流的运行ID
+                workflow_ids = get_workflow_runs(repo, workflow_id=workflow.id)
 
                 # 删除这些工作流运行
                 for workflow_id in workflow_ids:
