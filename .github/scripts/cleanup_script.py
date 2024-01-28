@@ -23,8 +23,14 @@ session.headers.update({
 
 def api_request(method, url, max_retries=3, **kwargs):
     """
-    发送API请求并返回响应，带重试逻辑
+    发送API请求并返回响应，带重试逻辑，并自动设置头部
     """
+    headers = {
+        'Authorization': f'token {TOKEN}',
+        'Accept': 'application/vnd.github.v3+json'
+    }
+    kwargs['headers'] = headers
+
     retries = 0
     while retries < max_retries:
         try:
@@ -91,6 +97,15 @@ def comment_on_pr(owner, repo, pr_number, body):
     else:
         logging.error(f"Failed to comment on PR #{pr_number} in {owner}/{repo}")
 
+def close_pr(owner, repo, pr_number):
+    """关闭指定的PR"""
+    close_url = f"{base_url}/repos/{owner}/{repo}/pulls/{pr_number}"
+    response = api_request('PATCH', close_url, json={'state': 'closed'})
+    if response and response.status_code == 200:
+        logging.info(f"Closed PR #{pr_number} in {owner}/{repo}")
+    else:
+        logging.error(f"Failed to close PR #{pr_number} in {owner}/{repo}")
+
 def process_dependabot_prs(owner, repo):
     """处理指定仓库中由dependabot创建的PR"""
     prs_url = f"{base_url}/repos/{owner}/{repo}/pulls"
@@ -99,22 +114,19 @@ def process_dependabot_prs(owner, repo):
         prs = response.json()
         for pr in prs:
             if pr['user']['login'] == 'dependabot[bot]':
-                # 检查 PR 是否落后于目标分支
-                if pr['mergeable_state'] == 'behind':
+                mergeable_state = pr.get('mergeable_state')
+                if mergeable_state is not None and mergeable_state == 'behind':
                     # 指示 Dependabot 更新 PR
                     comment_on_pr(owner, repo, pr['number'], "@dependabot rebase")
-
-                # 检查 PR 是否打开了很长时间（例如超过30天）
+                
+                # 检查 PR 创建时间，判断是否需要关闭
                 pr_created_at = datetime.strptime(pr['created_at'], '%Y-%m-%dT%H:%M:%SZ')
                 if datetime.now() - pr_created_at > timedelta(days=30):
-                    # 可以选择关闭PR或采取其他操作
-                    logging.info(f"Closing old dependabot PR #{pr['number']} in {owner}/{repo}")
-                    # close_pull_request(owner, repo, pr['number']) # 如果需要关闭PR
-
-                # 添加标签（如果需要）
-                # add_labels_to_pr(owner, repo, pr['number'], ['dependabot']) # 示例：添加标签函数
+                    # 如果PR超过30天没有更新，则关闭PR
+                    close_pr(owner, repo, pr['number'])
     else:
         logging.error(f"Failed to get PRs from repo {repo}")
+
 
 def is_inactive(updated_at):
     """判断PR是否不活跃（默认2天未活动）"""
