@@ -3,8 +3,11 @@ import logging
 from github import Github
 
 # 启用日志记录
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO, 
+                    format='%(asctime)s - %(levelname)s - %(message)s',
+                    handlers=[logging.FileHandler("github_automation.log"), logging.StreamHandler()])
+
+logger = logging.getLogger()
 
 def get_github_actions(repo):
     """获取一个仓库的 GitHub Actions"""
@@ -15,6 +18,14 @@ def get_github_actions(repo):
     except Exception as e:
         logger.error(f"获取仓库 {repo.name} 的 GitHub Actions 出错: {e}")
         return []
+
+def get_repositories(user):
+    """获取用户的所有仓库"""
+    try:
+        for repo in user.get_repos():
+            yield repo
+    except Exception as e:
+        logger.error(f"获取用户 {user.login} 的仓库时出错: {e}")
 
 def main():
     try:
@@ -27,12 +38,11 @@ def main():
 
         g = Github(GITHUB_TOKEN)
         user = g.get_user(GITHUB_USERNAME)
-        repos = user.get_repos()
 
-        for repo in repos:
+        for repo in get_repositories(user):
+            logger.info(f"检索仓库 {repo.name} (作者: {repo.owner.login}, 私有: {'是' if repo.private else '否'})")
             action_runs = get_github_actions(repo)
             if action_runs:
-                logger.info(f"仓库 {repo.name} 中的 GitHub Actions:")
                 for run_name, run_url, run_status in action_runs:
                     logger.info(f"Action 名称: {run_name}, 状态: {run_status}, URL: {run_url}")
 
