@@ -138,25 +138,23 @@ def has_recent_activity(owner, repo, pr_number):
     """检查PR在过去2天内是否有评论或活动"""
     comments_url = f"{base_url}/repos/{owner}/{repo}/issues/{pr_number}/comments"
     events_url = f"{base_url}/repos/{owner}/{repo}/issues/{pr_number}/events"
-    headers = create_headers()
-    two_days_ago = datetime.now() - timedelta(days=2)
     
     # 检查评论
-    comments_response = api_request('GET', comments_url, headers=headers)
+    comments_response = api_request('GET', comments_url)
     if comments_response and comments_response.status_code == 200:
         comments = comments_response.json()
         for comment in comments:
             comment_date = datetime.strptime(comment['created_at'], '%Y-%m-%dT%H:%M:%SZ')
-            if comment_date > two_days_ago:
+            if comment_date > datetime.now() - timedelta(days=2):
                 return True
     
     # 检查事件
-    events_response = api_request('GET', events_url, headers=headers)
+    events_response = api_request('GET', events_url)
     if events_response and events_response.status_code == 200:
         events = events_response.json()
         for event in events:
             event_date = datetime.strptime(event['created_at'], '%Y-%m-%dT%H:%M:%SZ')
-            if event_date > two_days_ago:
+            if event_date > datetime.now() - timedelta(days=2):
                 return True
 
     return False
