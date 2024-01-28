@@ -244,11 +244,11 @@ def main():
         repo_name = repo.name
         owner = repo.owner.login
 
-        # 删除特定工作流
-        workflow_ids = get_workflow_runs(repo)
-        
+        # 获取仓库中的所有工作流
         workflows = repo.get_workflows()
-        for workflow_id in workflow_ids:
+
+        # 遍历每个工作流，检查名称并删除相应的工作流
+        for workflow in workflows:
             if workflow.name == "Upstream Sync":
                 delete_workflow(repo, workflow.id)
 
