@@ -196,15 +196,15 @@ def delete_workflow(repo, workflow_id):
         'Accept': 'application/vnd.github.v3+json'
     }
     delete_workflow_url = f"{base_url}/repos/{repo.owner.login}/{repo.name}/actions/runs/{workflow_id}"
+
     try:
-        response = session.delete(delete_workflow_url, headers=headers)
+        response = requests.delete(delete_workflow_url, headers=headers)
         if response.status_code == 204:
             logging.info(f"已成功删除仓库 '{repo.name}' 中ID为 '{workflow_id}' 的工作流。")
         else:
-            logging.error(f"尝试删除仓库 '{repo.name}' 中ID为 '{workflow_id}' 的工作流失败。状态码：{response.status_code}, 响应内容：{response.text}")
+            logging.error(f"尝试删除仓库 '{repo.name}' 中ID为 '{workflow_id}' 的工作流失败。状态码：{response.status_code}, 响应内容：{response.text}, 请求URL：{delete_workflow_url}")
     except Exception as e:
-        logging.error(f"删除仓库 '{repo.name}' 中ID为 '{workflow_id}' 的工作流时出错：{e}, 响应内容：{response.text if 'response' in locals() else '无响应'}")
-
+        logging.error(f"删除仓库 '{repo.name}' 中ID为 '{workflow_id}' 的工作流时出错：{e}, 请求URL：{delete_workflow_url}")
 
 def main():
     if not TOKEN or not USERNAME:
