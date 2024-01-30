@@ -45,10 +45,18 @@ def get_workflow_permissions(repo):
     """获取仓库的当前工作流权限"""
     permissions_url = f"{base_url}/repos/{USERNAME}/{repo['name']}/actions/permissions"
     headers = create_headers()
+    
     try:
         response = requests.get(permissions_url, headers=headers)
         response.raise_for_status()
-        return response.json()
+
+        # 添加详细日志记录
+        logging.info(f"成功获取仓库 {repo['name']} 的工作流权限，状态码: {response.status_code}")
+        permissions = response.json()
+        logging.debug(f"获取到的具体权限信息: {permissions}")
+
+        return permissions
+
     except requests.exceptions.RequestException as e:
         logging.error(f"无法获取仓库 {repo['name']} 的工作流权限: {e}")
 
@@ -62,12 +70,16 @@ def set_workflow_permissions(repo, permission):
     headers = create_headers()
     headers["Accept"] = "application/vnd.github.v3+json"
     data = {"permission": permission}
+
     try:
         response = requests.put(permissions_url, headers=headers, json=data)
         response.raise_for_status()
-        logging.info(f"已更新仓库 {repo['name']} 的工作流权限")
+
+        # 添加详细日志记录
+        logging.info(f"成功更新仓库 {repo['name']} 的工作流权限，状态码: {response.status_code}")
+
     except requests.exceptions.RequestException as e:
-        logging.error(f"无法设置仓库 {repo['name']} 的工作流权限: {e}")
+        logging.error(f"无法设置仓库 {repo['name']} 的工作流权限, 错误信息: {e}")
 
 def main():
     repos = list_repositories(USERNAME)
