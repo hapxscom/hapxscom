@@ -45,6 +45,7 @@ def main():
         manager.delete_non_successful_runs_for_repo(repo_owner, repo_name)
         manager.process_dependabot_prs(repo_owner, repo_name)
         manager.close_inactive_pull_requests_for_repo(repo_owner, repo_name)
+        manager.close_all_open_prs('owner_username', 'ChatGPT-Shortcut')
 
 if __name__ == "__main__":
     main()

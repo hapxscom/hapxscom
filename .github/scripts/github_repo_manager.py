@@ -169,13 +169,24 @@ class GitHubRepoManager:
             if run['id'] != latest_runs[run['name']]['id']:
                 self.delete_workflow(owner, repo, run['id'])
 
-def create_headers():
+    def close_all_open_prs(self, owner, repo):
+        """关闭指定仓库中所有打开的PR"""
+        endpoint = f"repos/{owner}/{repo}/pulls?state=open"
+        response = self.client.api_request('GET', endpoint)
+        if response and response.status_code == 200:
+            pull_requests = response.json()
+            for pr in pull_requests:
+                self.close_pr(owner, repo, pr['number'])
+                logging.info(f"关闭了 {owner}/{repo} 的PR #{pr['number']}")
+        else:
+            logging.error(f"无法获取 {owner}/{repo} 的开放PR列表，状态码: {response.status_code}")
+    def create_headers():
     """创建请求头"""
     headers = CaseInsensitiveDict()
     headers["Authorization"] = f"token {TOKEN}"
     return headers
 
-def list_repositories(user):
+    def list_repositories(user):
     """获取用户的所有仓库列表，并处理分页"""
     all_repos = []
     page = 1
@@ -195,7 +206,7 @@ def list_repositories(user):
             break
     return all_repos
 
-def get_workflow_permissions(repo):
+    def get_workflow_permissions(repo):
     """获取仓库的当前工作流权限"""
     permissions_url = f"{base_url}/repos/{username}/{repo['name']}/actions/permissions"
     headers = create_headers()
@@ -206,23 +217,23 @@ def get_workflow_permissions(repo):
     except requests.exceptions.RequestException as e:
         logging.error(f"无法获取仓库 {repo['name']} 的工作流权限: {e}")
 
-def set_workflow_permissions(repo, permission):
-    """设置仓库的工作流权限"""
-    if permission == "all":
+   def set_workflow_permissions(repo, permission):
+     """设置仓库的工作流权限"""
+     if permission == "all":
         logging.info(f"仓库 {repo['name']} 的工作流权限已设置为 'all'.")
         return
 
-    permissions_url = f"{base_url}/repos/{username}/{repo['name']}/actions/permissions"
-    headers = create_headers()
-    headers["Accept"] = "application/vnd.github.v3+json"
-    data = {"permission": permission}
-    try:
-        response = requests.put(permissions_url, headers=headers, json=data)
-        response.raise_for_status()
-        logging.info(f"已更新仓库 {repo['name']} 的工作流权限")
-    except requests.exceptions.RequestException as e:
-        logging.error(f"无法设置仓库 {repo['name']} 的工作流权限: {e}")
-def check_permissions():
+     permissions_url = f"{base_url}/repos/{username}/{repo['name']}/actions/permissions"
+     headers = create_headers()
+     headers["Accept"] = "application/vnd.github.v3+json"
+     data = {"permission": permission}
+     try:
+         response = requests.put(permissions_url, headers=headers, json=data)
+         response.raise_for_status()
+         logging.info(f"已更新仓库 {repo['name']} 的工作流权限")
+     except requests.exceptions.RequestException as e:
+         logging.error(f"无法设置仓库 {repo['name']} 的工作流权限: {e}")
+   def check_permissions():
     repos = list_repositories(USERNAME)
     logging.info(f"需要检查的仓库总数: {len(repos)}")
 
@@ -231,3 +242,4 @@ def check_permissions():
         if permissions and permissions.get('enabled', False) and permissions.get('allowed_actions', '') != 'all':
             logging.info(f"正在将仓库: {repo['name']} 的权限更新为 'all'")
             set_workflow_permissions(repo, "all")
+
