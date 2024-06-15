@@ -236,7 +236,7 @@ class GitHubRepoManager:
                 logging.error(f"请求仓库 '{repo}' 的工作流运行时未获得响应。")
                 break
 
-    return runs_data
+        return runs_data
 
     def delete_workflow(self, owner, repo, workflow_id):
         """
