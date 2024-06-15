@@ -1,0 +1,97 @@
+/* Reset some basic elements */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Calibri', sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background-color: #f4f4f4;
+}
+
+/* Header Styling */
+header {
+    padding: 2rem 1rem;
+    background: linear-gradient(to right, #0b27dc, #0c4fd6);
+    text-align: center;
+    animation: gradientShift 10s ease infinite;
+}
+
+@keyframes gradientShift {
+    0% {background-position: 0% 50%;}
+    50% {background-position: 100% 50%;}
+    100% {background-position: 0% 50%;}
+}
+
+header h1 a {
+    color: #fff;
+    text-decoration: none;
+}
+
+header h2 {
+    color: #fff;
+    font-size: 1.2rem;
+    margin-top: 0.5rem;
+}
+
+/* Content Styling */
+main {
+    max-width: 960px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.about-me,
+.stats-section {
+    margin-bottom: 2rem;
+}
+
+.about-me h2,
+.stats-section h2 {
+    font-size: 24px;
+    margin-bottom: 1rem;
+}
+
+ul {
+    list-style: none;
+    padding-left: 2rem;
+}
+
+li p {
+    position: relative;
+    padding-left: 2rem;
+}
+
+li p:before {
+    content: '';
+    position: absolute;
+    top: 0.8rem;
+    left: 0;
+    width: 1rem;
+    height: 1rem;
+    background-image: url('data:image/svg+xml;charset=utf8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'#259076\'%3E%3Cpath d=\'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z\'/%3E%3C/svg%3E');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+}
+
+.stat-card {
+    transition: transform 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+}
+
+footer {
+    padding: 2rem;
+    text-align: center;
+    color: #777;
+    border-top: 1px solid #ddd;
+}
