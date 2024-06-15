@@ -176,22 +176,38 @@ class GitHubRepoManager:
 
         return False
 
+    def add_comment_to_pr(self, owner, repo, pr_number, comment):
+        """
+        给指定的Pull Request添加评论。
+
+        :param owner: 仓库所有者。
+        :param repo: 仓库名称。
+        :param pr_number: Pull Request的编号。
+        :param comment: 要添加的评论内容。
+        """
+        endpoint = f"repos/{owner}/{repo}/issues/{pr_number}/comments"
+        data = {"body": comment}
+        response = self.client.api_request('POST', endpoint, json=data)
+        if response.status_code != 201:
+            logging.error(f"添加评论到PR #{pr_number} 失败，状态码: {response.status_code}")
+
     def close_inactive_pull_requests_for_repo(self, owner, repo):
         """
-        关闭指定仓库中所有超过2天没有活动的PR。
+        关闭指定仓库中所有超过2天没有活动的PR，并在关闭时添加评论说明原因。
 
         :param owner: 仓库所有者。
         :param repo: 仓库名称。
         """
-        """关闭仓库中所有2天未活动的PR"""
         endpoint = f"repos/{owner}/{repo}/pulls?state=open"
         response = self.client.api_request('GET', endpoint)
         if response and response.status_code == 200:
             pull_requests = response.json()
             for pr in pull_requests:
                 if self.is_inactive(pr['updated_at']) and not self.has_recent_activity(owner, repo, pr['number']):
+                    comment = "由于长时间无活动，此Pull Request已被自动关闭。"
+                    self.add_comment_to_pr(owner, repo, pr['number'], comment)
                     self.close_pr(owner, repo, pr['number'])
-                    logging.info(f"由于长时间无活动，关闭了 {owner}/{repo} 的PR #{pr['number']}")
+                    logging.info(f"由于长时间无活动，关闭了 {owner}/{repo} 的PR #{pr['number']} 并添加了评论")
         else:
             logging.error(f"无法获取 {owner}/{repo} 的开放PR列表，状态码: {response.status_code}")
     
