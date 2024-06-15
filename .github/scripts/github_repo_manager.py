@@ -197,30 +197,30 @@ class GitHubRepoManager:
     
     def get_workflow_runs(self, owner, repo, per_page=100):
         """
-        获取指定仓库的所有工作流运行的详细信息。
-
-        :param owner: 仓库所有者。
-        :param repo: 仓库名称。
-        :param per_page: 每页的条数。
-        :return: 工作流运行列表。
+        获取指定仓库的所有工作流运行的详细信息，改进错误处理。
         """
-        """获取仓库中的所有工作流运行的详细信息，遍历所有页面"""
         runs_data = []
         page = 1
         while True:
             endpoint = f"repos/{owner}/{repo}/actions/runs?page={page}&per_page={per_page}"
             response = self.client.api_request('GET', endpoint)
-            if response and response.status_code == 200:
-                runs = response.json().get('workflow_runs', [])
-                runs_data.extend(runs)
+            
+            if response is not None:
+                if response.status_code == 200:
+                    runs = response.json().get('workflow_runs', [])
+                    runs_data.extend(runs)
 
-                if len(runs) < per_page:
+                    if len(runs) < per_page:
+                        break
+                    page += 1
+                else:
+                    logging.error(f"获取仓库 '{repo}' 的工作流运行失败。状态码：{response.status_code}")
                     break
-                page += 1
             else:
-                logging.error(f"获取仓库 '{repo}' 的工作流运行失败。状态码：{response.status_code}")
+                logging.error(f"请求仓库 '{repo}' 的工作流运行时未获得响应。")
                 break
-        return runs_data
+
+    return runs_data
 
     def delete_workflow(self, owner, repo, workflow_id):
         """
