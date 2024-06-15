@@ -189,7 +189,7 @@ class GitHubRepoManager:
         data = {"body": comment}
         response = self.client.api_request('POST', endpoint, json=data)
         if response.status_code != 201:
-            logging.error(f"添加评论到PR #{pr_number} 失败，状态码: {response.status_code}")
+            logging.error(f"添加评论到PR #{pr_number} 失败")
 
     def close_inactive_pull_requests_for_repo(self, owner, repo):
         """
@@ -209,7 +209,7 @@ class GitHubRepoManager:
                     self.close_pr(owner, repo, pr['number'])
                     logging.info(f"由于长时间无活动，关闭了 {owner}/{repo} 的PR #{pr['number']} 并添加了评论")
         else:
-            logging.error(f"无法获取 {owner}/{repo} 的开放PR列表，状态码: {response.status_code}")
+            logging.error(f"无法获取 {owner}/{repo} 的开放PR列表")
     
     def get_workflow_runs(self, owner, repo, per_page=100):
         """
@@ -289,4 +289,4 @@ class GitHubRepoManager:
                 self.close_pr(owner, repo, pr['number'])
                 logging.info(f"关闭了 {owner}/{repo} 的PR #{pr['number']}")
         else:
-            logging.error(f"无法获取 {owner}/{repo} 的开放PR列表，状态码: {response.status_code}")
+            logging.error(f"无法获取 {owner}/{repo} 的开放PR列表")
