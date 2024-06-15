@@ -1,20 +1,43 @@
+# 导入必要的库，用于与GitHub API交互和日志记录
 import os
 import requests
 import logging
-from requests.exceptions import HTTPError
+from requests.exceptions import HTTPError, RetryError
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
-# 设置日志记录，包括时间、日志级别和消息
+# 配置日志记录的基本设置
+# 设置日志记录的基本配置
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def get_github_token():
-    # 从环境变量获取GitHub令牌
+    """
+    获取GitHub令牌环境变量。
+
+    返回:
+        GitHub令牌（字符串）。
+    """
     return os.getenv('GH_TOKEN')
 
 def get_github_username():
-    # 从环境变量获取GitHub用户名
+    """
+    获取GitHub用户名环境变量。
+
+    返回:
+        GitHub用户名（字符串）。
+    """
     return os.getenv('USERNAME')
 
 def create_headers(token):
+    """
+    创建GitHub API请求的头部。
+
+    参数:
+        token (str): GitHub令牌。
+
+    返回:
+        包含授权信息的字典。
+    """
     # 为GitHub API请求创建头部信息
     return {
         "Authorization": f"token {token}",
@@ -22,29 +45,57 @@ def create_headers(token):
     }
 
 def get_repositories(username, token):
+    """
+    获取用户的GitHub仓库列表。
+
+    参数:
+        username (str): GitHub用户名。
+        token (str): GitHub令牌。
+
+    返回:
+        一个生成器，生成每个仓库的详细信息（字典）。
+    """
     page = 1
     headers = create_headers(token)
+    
+    # 设置重试策略
+    retry_strategy = Retry(
+        total=5,
+        status_forcelist=[429, 500, 502, 503, 504],
+        method_whitelist=["HEAD", "GET", "OPTIONS"],
+        backoff_factor=1
+    )
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    session = requests.Session()
+    session.mount("https://", adapter)
+
     while True:
         url = f"https://api.github.com/users/{username}/repos?type=all&per_page=100&page={page}"
         try:
-            response = requests.get(url, headers=headers)
-            response.raise_for_status()
-            repos = response.json()
-            if not repos:
-                break
-            for repo in repos:
-                yield repo
-            page += 1
+            with session.get(url, headers=headers) as response:
+                response.raise_for_status()
+                repos = response.json()
+                if not repos:
+                    break
+                for repo in repos:
+                    yield repo
+                page += 1
         except HTTPError as http_err:
             logging.error(f"发生HTTP错误: {http_err}")
             break
         except Exception as err:
             logging.error(f"发生其他错误: {err}")
             break
-            
+
 def get_upstream_repo_info(repo):
     """
-    从仓库信息中提取上游仓库信息，包括上游仓库的地址。
+    获取上游仓库的信息。
+
+    参数:
+        repo (dict): 仓库的详细信息。
+
+    返回:
+        上游仓库的详细信息（字典）和上游仓库的URL（字符串）。
     """
     if 'parent' in repo:
         parent_info = repo['parent']
@@ -59,8 +110,14 @@ def get_upstream_repo_info(repo):
         logging.warning(f"仓库 {repo['name']} 没有上游仓库信息。")
         return None, None
 
-
 def create_pull_request(repo, token):
+    """
+    为仓库创建一个拉取请求，以同步更新上游仓库的更改。
+
+    参数:
+        repo (dict): 需要创建拉取请求的仓库的详细信息。
+        token (str): GitHub令牌。
+    """
     upstream_repo_info, upstream_repo_url = get_upstream_repo_info(repo)
     if not upstream_repo_info:
         logging.warning(f"仓库 {repo['name']} 无法获取上游仓库信息。")
@@ -69,7 +126,6 @@ def create_pull_request(repo, token):
     repo_name = repo['name']
     fork_full_name = repo['full_name']
 
-    # 此处确保 upstream_repo_info 是一个字典
     if isinstance(upstream_repo_info, dict):
         upstream_owner = upstream_repo_info['owner']['login']
         upstream_branch = upstream_repo_info['default_branch']
@@ -95,6 +151,9 @@ def create_pull_request(repo, token):
         logging.error(f"发生其他错误: {err}")
 
 def main():
+    """
+    主函数，执行程序的主要逻辑。
+    """
     token = get_github_token()
     username = get_github_username()
     if not token or not username:

@@ -3,10 +3,24 @@ from datetime import datetime, timedelta
 from github_api_client import GitHubAPIClient
 
 class GitHubRepoManager:
+    """
+    GitHub仓库管理类，提供对GitHub仓库的各种操作，如删除工作流运行、获取仓库列表、关闭PR等。
+    """
+
     def __init__(self):
+        """
+        初始化GitHubAPIClient用于API请求。
+        """
         self.client = GitHubAPIClient()
 
     def delete_run(self, owner, repo, run_id):
+        """
+        删除指定仓库的工作流运行。
+
+        :param owner: 仓库所有者。
+        :param repo: 仓库名称。
+        :param run_id: 工作流运行ID。
+        """
         """删除指定的工作流运行记录"""
         endpoint = f"repos/{owner}/{repo}/actions/runs/{run_id}"
         response = self.client.api_request('DELETE', endpoint)
@@ -16,6 +30,12 @@ class GitHubRepoManager:
             logging.error(f"无法从仓库 {repo} 删除运行记录 {run_id}")
 
     def get_repos(self, username):
+        """
+        获取指定用户的所有仓库。
+
+        :param username: 用户名。
+        :return: 仓库列表。
+        """
         """获取用户的所有仓库，支持分页"""
         repos = []
         page = 1
@@ -33,6 +53,12 @@ class GitHubRepoManager:
         return repos
 
     def delete_non_successful_runs_for_repo(self, owner, repo):
+        """
+        删除指定仓库中所有未成功的工作流运行。
+
+        :param owner: 仓库所有者。
+        :param repo: 仓库名称。
+        """
         """删除仓库中所有未成功的工作流运行记录"""
         page = 1
         while True:
@@ -53,6 +79,14 @@ class GitHubRepoManager:
                 break
 
     def comment_on_pr(self, owner, repo, pr_number, body):
+        """
+        在指定的PR上发表评论。
+
+        :param owner: 仓库所有者。
+        :param repo: 仓库名称。
+        :param pr_number: PR编号。
+        :param body: 评论内容。
+        """
         """在指定的PR上发布评论"""
         endpoint = f"repos/{owner}/{repo}/issues/{pr_number}/comments"
         response = self.client.api_request('POST', endpoint, json={'body': body})
@@ -62,6 +96,13 @@ class GitHubRepoManager:
             logging.error(f"无法在 {owner}/{repo} 的PR #{pr_number} 上发表评论")
 
     def close_pr(self, owner, repo, pr_number):
+        """
+        关闭指定的PR。
+
+        :param owner: 仓库所有者。
+        :param repo: 仓库名称。
+        :param pr_number: PR编号。
+        """
         """关闭指定的PR"""
         endpoint = f"repos/{owner}/{repo}/pulls/{pr_number}"
         response = self.client.api_request('PATCH', endpoint, json={'state': 'closed'})
@@ -71,6 +112,12 @@ class GitHubRepoManager:
             logging.error(f"无法关闭 {owner}/{repo} 的PR #{pr_number}")
 
     def process_dependabot_prs(self, owner, repo):
+        """
+        处理指定仓库中由dependabot创建的PR。
+
+        :param owner: 仓库所有者。
+        :param repo: 仓库名称。
+        """
         """处理指定仓库中由dependabot创建的PR"""
         endpoint = f"repos/{owner}/{repo}/pulls"
         response = self.client.api_request('GET', endpoint)
@@ -89,12 +136,26 @@ class GitHubRepoManager:
             logging.error(f"无法从仓库 {repo} 获取PRs")
 
     def is_inactive(self, updated_at):
+        """
+        判断PR是否不活跃。
+
+        :param updated_at: PR的最后更新时间。
+        :return: 如果PR不活跃返回True，否则返回False。
+        """
         """判断PR是否不活跃（默认2天未活动）"""
         inactive_time = datetime.now() - timedelta(days=2)
         pr_last_updated = datetime.strptime(updated_at, '%Y-%m-%dT%H:%M:%SZ')
         return pr_last_updated < inactive_time
 
     def has_recent_activity(self, owner, repo, pr_number):
+        """
+        检查PR在过去2天内是否有评论或活动。
+
+        :param owner: 仓库所有者。
+        :param repo: 仓库名称。
+        :param pr_number: PR编号。
+        :return: 如果PR有 recent activity 返回True，否则返回False。
+        """
         """检查PR在过去2天内是否有评论或活动"""
         comments_endpoint = f"repos/{owner}/{repo}/issues/{pr_number}/comments"
         events_endpoint = f"repos/{owner}/{repo}/issues/{pr_number}/events"
@@ -116,6 +177,12 @@ class GitHubRepoManager:
         return False
 
     def close_inactive_pull_requests_for_repo(self, owner, repo):
+        """
+        关闭指定仓库中所有超过2天没有活动的PR。
+
+        :param owner: 仓库所有者。
+        :param repo: 仓库名称。
+        """
         """关闭仓库中所有2天未活动的PR"""
         endpoint = f"repos/{owner}/{repo}/pulls?state=open"
         response = self.client.api_request('GET', endpoint)
@@ -129,6 +196,14 @@ class GitHubRepoManager:
             logging.error(f"无法获取 {owner}/{repo} 的开放PR列表，状态码: {response.status_code}")
     
     def get_workflow_runs(self, owner, repo, per_page=100):
+        """
+        获取指定仓库的所有工作流运行的详细信息。
+
+        :param owner: 仓库所有者。
+        :param repo: 仓库名称。
+        :param per_page: 每页的条数。
+        :return: 工作流运行列表。
+        """
         """获取仓库中的所有工作流运行的详细信息，遍历所有页面"""
         runs_data = []
         page = 1
@@ -148,6 +223,13 @@ class GitHubRepoManager:
         return runs_data
 
     def delete_workflow(self, owner, repo, workflow_id):
+        """
+        删除指定仓库中的指定工作流。
+
+        :param owner: 仓库所有者。
+        :param repo: 仓库名称。
+        :param workflow_id: 工作流ID。
+        """
         """删除指定仓库中的特定工作流"""
         endpoint = f"repos/{owner}/{repo}/actions/runs/{workflow_id}"
         response = self.client.api_request('DELETE', endpoint)
@@ -157,6 +239,12 @@ class GitHubRepoManager:
             logging.error(f"尝试删除仓库 '{repo}' 中ID为 '{workflow_id}' 的工作流失败。状态码：{response.status_code}")
 
     def maintain_repo_workflows(self, owner, repo):
+        """
+        维护指定仓库的工作流，保留最新的工作流运行并删除其他运行。
+
+        :param owner: 仓库所有者。
+        :param repo: 仓库名称。
+        """
         """维护特定仓库的工作流，保留最新的工作流运行并删除其他的"""
         all_runs = self.get_workflow_runs(owner, repo)
         latest_runs = {}
@@ -170,6 +258,12 @@ class GitHubRepoManager:
                 self.delete_workflow(owner, repo, run['id'])
 
     def close_all_open_prs(self, owner, repo):
+        """
+        关闭指定仓库中所有打开的PR。
+
+        :param owner: 仓库所有者。
+        :param repo: 仓库名称。
+        """
         """关闭指定仓库中所有打开的PR"""
         endpoint = f"repos/{owner}/{repo}/pulls?state=open"
         response = self.client.api_request('GET', endpoint)
@@ -180,4 +274,3 @@ class GitHubRepoManager:
                 logging.info(f"关闭了 {owner}/{repo} 的PR #{pr['number']}")
         else:
             logging.error(f"无法获取 {owner}/{repo} 的开放PR列表，状态码: {response.status_code}")
-
