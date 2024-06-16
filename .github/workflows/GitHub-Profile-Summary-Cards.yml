@@ -1,29 +1,39 @@
+# 工作流名称，用于在GitHub Actions中标识此工作流
 name: GitHub-Profile-Summary-Cards
 
+# 触发条件，这里配置了定时执行和手动触发两种方式
 on:
-  schedule: # execute every 24 hours
-    - cron: "* */24 * * *"
+  # 定时执行，使用cron表达式，每24小时执行一次
+  schedule:
+    - cron: "0 0 * * *"
+  # 手动触发，允许通过界面或API手动启动工作流
   workflow_dispatch:
 
+# 定义工作流中的任务
 jobs:
+  # 任务名称，用于标识下面的构建任务
   build:
+    # 任务运行的环境，这里选择最新的Ubuntu版本
     runs-on: ubuntu-latest
+    # 任务描述
     name: generate-github-profile-summary-cards
+    # 任务权限设置，这里申请写入内容的权限
     permissions:
       contents: write
 
+    # 任务步骤，下面定义了两个步骤
     steps:
+      # 第一步：使用GitHub Actions的checkout动作，检出代码仓库
       - uses: actions/checkout@v4
+      # 第二步：使用vn7n24fzkq/github-profile-summary-cards动作生成GitHub个人资料摘要卡片
       - uses: vn7n24fzkq/github-profile-summary-cards@release
-        env: # default use ${{ secrets.SUMMARY_GITHUB_TOKEN }}, you should replace with your personal access token
+        # 环境变量，这里使用了GitHub Token来授权
+        env:
           GITHUB_TOKEN: ${{ secrets.SUMMARY_GITHUB_TOKEN }}
+        # 动作参数，配置了用户名、目标分支、时区偏移、排除语言等
         with:
           USERNAME: ${{ github.repository_owner }}
-          # BRANCH_NAME is optional, default to main, branch name to push cards
           BRANCH_NAME: "main"
-          # UTC_OFFSET is optional, default to zero
           UTC_OFFSET: 8
-          # EXCLUDE is an optional comma seperated list of languages to exclude, defaults to ""
           EXCLUDE: ""
-          # AUTO_PUSH is optional, a boolean variable default to true, whether automatically push generated files to desired branch
           AUTO_PUSH: true
