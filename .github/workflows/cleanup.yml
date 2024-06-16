@@ -28,6 +28,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install --upgrade -r requirements.txt
       - name: Test with pytest auto_perms.py
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          USERNAME: "Happy-clo"
         run: |
           python .github/scripts/test_auto_perms.py
       # 运行清理脚本

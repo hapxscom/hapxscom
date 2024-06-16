@@ -8,7 +8,7 @@ import pytest
 from auto_perms import create_headers, list_repositories, get_workflow_permissions, set_workflow_permissions, main
 
 # 由于我们的代码依赖于环境变量TOKEN和USERNAME，我们需要在测试中设置它们
-os.getenv['TOKEN'] = 'test_token'
+os.getenv['GH_TOKEN'] = 'test_token'
 os.getenv['USERNAME'] = 'test_user'
 
 # 请求的模拟响应
