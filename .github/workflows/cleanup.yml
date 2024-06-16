@@ -32,6 +32,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           USERNAME: "Happy-clo"
         run: |
+          export GH_TOKEN=test_token
+          export USERNAME=test_user
           python .github/scripts/test_auto_perms.py
       # 运行清理脚本
       - name: Run cleanup script

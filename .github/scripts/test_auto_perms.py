@@ -7,9 +7,9 @@ import pytest
 # 这里需要从auto_perms.py导入我们要测试的函数
 from auto_perms import create_headers, list_repositories, get_workflow_permissions, set_workflow_permissions, main
 
-# 由于我们的代码依赖于环境变量TOKEN和USERNAME，我们需要在测试中设置它们
-os.getenv['GH_TOKEN'] = 'test_token'
-os.getenv['USERNAME'] = 'test_user'
+def test_your_function(monkeypatch):
+    monkeypatch.setenv('GH_TOKEN', 'test_token')
+    monkeypatch.setenv('USERNAME', 'test_user')
 
 # 请求的模拟响应
 mock_response_success = Mock(status_code=200, json=lambda: {})
