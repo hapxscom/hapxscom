@@ -2,14 +2,23 @@ import os
 import logging
 from github import Github
 
+# 初始化日志记录器，用于记录程序运行过程中的信息
 # 启用日志记录
 logging.basicConfig(level=logging.INFO, 
                     format='%(asctime)s - %(levelname)s - %(message)s',
                     handlers=[logging.FileHandler("github_automation.log"), logging.StreamHandler()])
-
 logger = logging.getLogger()
 
 def get_github_actions(repo):
+    """
+    获取给定仓库的GitHub Actions运行信息。
+    
+    参数:
+    repo -- Github仓库对象。
+    
+    返回:
+    一个包含Actions名称、URL和状态的列表。
+    """
     """获取一个仓库的 GitHub Actions"""
     try:
         workflow_runs = repo.get_workflow_runs()
@@ -20,6 +29,15 @@ def get_github_actions(repo):
         return []
 
 def get_repositories(user):
+    """
+    获取给定用户的所有仓库。
+    
+    参数:
+    user -- Github用户对象。
+    
+    返回:
+    一个生成器，生成用户的所有仓库对象。
+    """
     """获取用户的所有仓库"""
     try:
         for repo in user.get_repos():
@@ -28,6 +46,10 @@ def get_repositories(user):
         logger.error(f"获取用户 {user.login} 的仓库时出错: {e}")
 
 def main():
+    """
+    主函数，程序的入口点。
+    它负责配置GitHub客户端并遍历用户仓库，获取并记录每个仓库的GitHub Actions信息。
+    """
     try:
         GITHUB_TOKEN = os.getenv('GH_TOKEN')
         GITHUB_USERNAME = os.getenv('USERNAME')
