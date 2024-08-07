@@ -246,10 +246,12 @@ class GitHubRepoManager:
         :param repo: 仓库名称。
         :param workflow_id: 工作流ID。
         """
-        """删除指定仓库中的特定工作流"""
         endpoint = f"repos/{owner}/{repo}/actions/runs/{workflow_id}"
         response = self.client.api_request('DELETE', endpoint)
-        if response and response.status_code == 204:
+        
+        if response is None:
+            logging.error(f"尝试删除仓库 '{repo}' 中ID为 '{workflow_id}' 的工作流失败。未收到有效响应。")
+        elif response.status_code == 204:
             logging.info(f"已成功删除仓库 '{repo}' 中ID为 '{workflow_id}' 的工作流。")
         else:
             logging.error(f"尝试删除仓库 '{repo}' 中ID为 '{workflow_id}' 的工作流失败。状态码：{response.status_code}")
