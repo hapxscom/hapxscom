@@ -1,7 +1,6 @@
 # 清理非成功运行和PR的工作流程
 name: Cleanup Non-Successful Runs And PRs
 
-# 触发条件：当推送到main分支或按计划运行（每天凌晨UTC时间）
 on:
   push:
     branches:
