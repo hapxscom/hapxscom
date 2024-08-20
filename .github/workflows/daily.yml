@@ -18,7 +18,7 @@ jobs:
 
       - name: Generate Random Data and Complex Hash
         run: |
-          for i in {1..5}; do
+          for i in {1..25}; do
             RANDOM_DATA=$(openssl rand -base64 96)
             TIMESTAMP=$(date +%s%N)  # 纳秒时间戳
             COMPLEX_DATA="$RANDOM_DATA$TIMESTAMP"  # 组合随机数据和时间戳
