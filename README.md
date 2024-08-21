@@ -10,35 +10,21 @@
     <header>
         <h1 align="center">
             <a href="https://github.com/Happy-clo/Happy-clo">
-            <img src="https://readme-typing-svg.herokuapp.com/?font=Calibri&color=%23259076&size=28&lines=Hello+%F0%9F%91%8B%2C+I%27m+Happy-clo">
-            </a>  
+                <img src="https://readme-typing-svg.herokuapp.com/?font=Calibri&color=%23259076&size=28&lines=Hello+%F0%9F%91%8B%2C+I%27m+Happy-clo">
+            </a>
         </h1>
         <h2 align="center">Hi there 👋</h2>
     </header>
     <main>
         <section>
             <ul>
-                <li>
-                    <p>🔭 I'm currently working on creating an AI website for the best chat.</p>
-                </li>
-                <li>
-                    <p>🌱 I'm still going to school.</p>
-                </li>
-                <li>
-                    <p>👯 I want to cooperate with people who have the same passion for AI and want to create products that are useful to society⚡.</p>
-                </li>
-                <li>
-                    <p>🤔 I'm looking for help on how to optimize my code and improve AI performance.</p>
-                </li>
-                <li>
-                    <p>💬 Ask me about anything related to AI, I will try to answer as best I can.</p>
-                </li>
-                <li>
-                    <p>😄 My pronoun is he/him/guy.</p>
-                </li>
-                <li>
-                    <p>💁‍♂️ Here is the link to my projects ---> <a href="https://happya.top">https://happya.top</a></p>
-                </li>
+                <li><p>🔭 I'm currently working on creating an AI website for the best chat.</p></li>
+                <li><p>🌱 I'm still going to school.</p></li>
+                <li><p>👯 I want to cooperate with people who have the same passion for AI and want to create products that are useful to society⚡.</p></li>
+                <li><p>🤔 I'm looking for help on how to optimize my code and improve AI performance.</p></li>
+                <li><p>💬 Ask me about anything related to AI, I will try to answer as best I can.</p></li>
+                <li><p>😄 My pronoun is he/him/guy.</p></li>
+                <li><p>💁‍♂️ Here is the link to my projects ---> <a href="https://happya.top">https://happya.top</a></p></li>
             </ul>
         </section>
         <section>
@@ -58,25 +44,25 @@
                 <!-- GitHub contribution grid snake -->
                 <div class="stat-card">
                     <picture>
-                        <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Happy-clo/Happy-clo/blob/output/github-contribution-grid-snake-dark.svg" />
-                        <source media="(prefers-color-scheme: light)" srcset="https://github.com/Happy-clo/Happy-clo/blob/output/github-contribution-grid-snake.svg" />
-                        <img alt="GitHub Snake" src="https://github.com/Happy-clo/Happy-clo/blob/output/github-contribution-grid-snake.svg" />
+                        <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Happy-clo/Happy-clo/blob/output/github-contribution-grid-snake-dark.svg">
+                        <source media="(prefers-color-scheme: light)" srcset="https://github.com/Happy-clo/Happy-clo/blob/output/github-contribution-grid-snake.svg">
+                        <img src="https://github.com/Happy-clo/Happy-clo/blob/output/github-contribution-grid-snake.svg" alt="GitHub Snake">
                     </picture>
                 </div>
             </div>
             
             <div class="additional-stats">
                 <a href="#">
-                    <img align="left" width="390" alt="GitHub basic" src="https://raw.githubusercontent.com/Happy-clo/Happy-clo/main/github-basic.svg" />
+                    <img src="https://raw.githubusercontent.com/Happy-clo/Happy-clo/main/github-basic.svg" alt="GitHub basic" style="width: 390px; float: left;">
                 </a>
                 <a href="#">
-                    <img align="left" width="390" alt="GitHub steam" src="https://raw.githubusercontent.com/Happy-clo/Happy-clo/main/github-steam.svg" />
+                    <img src="https://raw.githubusercontent.com/Happy-clo/Happy-clo/main/github-steam.svg" alt="GitHub steam" style="width: 390px; float: left;">
                 </a>
                 <a href="#">
-                    <img align="right" width="390" alt="GitHub language" src="https://raw.githubusercontent.com/Happy-clo/Happy-clo/main/github-languages.svg" />
+                    <img src="https://raw.githubusercontent.com/Happy-clo/Happy-clo/main/github-languages.svg" alt="GitHub language" style="width: 390px; float: right;">
                 </a>
                 <a href="#">
-                    <img align="right" width="390" alt="GitHub ysdag" src="https://raw.githubusercontent.com/Happy-clo/Happy-clo/main/github-ysdag.svg" />
+                    <img src="https://raw.githubusercontent.com/Happy-clo/Happy-clo/main/github-ysdag.svg" alt="GitHub ysdag" style="width: 390px; float: right;">
                 </a>
             </div>
         </section>
