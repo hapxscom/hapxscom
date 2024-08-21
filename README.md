@@ -44,7 +44,7 @@
         <section>
             <h2>📊 Statistics</h2>
             <div class="stats">
-                <!-- github status cards -->
+                <!-- GitHub status cards -->
                 <div class="stat-card">
                     <a href="https://github.com/Happy-clo/Happy-clo">
                         <img src="http://github-profile-summary-cards.vercel.app/api/cards/profile-details?username=Happy-clo&theme=github_dark" alt="Profile Details">
@@ -55,7 +55,29 @@
                         <img src="https://user-images.githubusercontent.com/73097560/115834477-dbab4500-a447-11eb-908a-139a6edaec5c.gif" alt="Activity Graph">
                     </a>
                 </div>
-                <!-- Add more stat cards as needed -->
+                <!-- GitHub contribution grid snake -->
+                <div class="stat-card">
+                    <picture>
+                        <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Happy-clo/Happy-clo/blob/output/github-contribution-grid-snake-dark.svg" />
+                        <source media="(prefers-color-scheme: light)" srcset="https://github.com/Happy-clo/Happy-clo/blob/output/github-contribution-grid-snake.svg" />
+                        <img alt="GitHub Snake" src="https://github.com/Happy-clo/Happy-clo/blob/output/github-contribution-grid-snake.svg" />
+                    </picture>
+                </div>
+            </div>
+            
+            <div class="additional-stats">
+                <a href="#">
+                    <img align="left" width="390" alt="GitHub basic" src="https://raw.githubusercontent.com/Happy-clo/Happy-clo/main/github-basic.svg" />
+                </a>
+                <a href="#">
+                    <img align="left" width="390" alt="GitHub steam" src="https://raw.githubusercontent.com/Happy-clo/Happy-clo/main/github-steam.svg" />
+                </a>
+                <a href="#">
+                    <img align="right" width="390" alt="GitHub language" src="https://raw.githubusercontent.com/Happy-clo/Happy-clo/main/github-languages.svg" />
+                </a>
+                <a href="#">
+                    <img align="right" width="390" alt="GitHub ysdag" src="https://raw.githubusercontent.com/Happy-clo/Happy-clo/main/github-ysdag.svg" />
+                </a>
             </div>
         </section>
     </main>
