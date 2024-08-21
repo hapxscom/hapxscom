@@ -53,16 +53,7 @@
             
             <div class="additional-stats">
                 <a href="#">
-                    <img src="https://raw.githubusercontent.com/Happy-clo/Happy-clo/main/github-basic.svg" alt="GitHub basic" style="width: 390px; float: left;">
-                </a>
-                <a href="#">
-                    <img src="https://raw.githubusercontent.com/Happy-clo/Happy-clo/main/github-steam.svg" alt="GitHub steam" style="width: 390px; float: left;">
-                </a>
-                <a href="#">
-                    <img src="https://raw.githubusercontent.com/Happy-clo/Happy-clo/main/github-languages.svg" alt="GitHub language" style="width: 390px; float: right;">
-                </a>
-                <a href="#">
-                    <img src="https://raw.githubusercontent.com/Happy-clo/Happy-clo/main/github-ysdag.svg" alt="GitHub ysdag" style="width: 390px; float: right;">
+                    <img src="https://raw.githubusercontent.com/Happy-clo/Happy-clo/main/github-metrics.svg" alt="GitHub basic" style="width: 390px; float: left;">
                 </a>
             </div>
         </section>
