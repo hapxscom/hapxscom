@@ -22,11 +22,11 @@ jobs:
 
       - name: Generate Random Data and Complex Hash
         run: |
-          Run for i in {1..20}; do
+          for i in {1..20}; do
             RANDOM_DATA=$(openssl rand -base64 96)
             TIMESTAMP=$(date +%s%N)
-            COMPLEX_DATA="$RANDOM_DATA$TIMESTAMP"  
-            HASH_VALUE=$(echo -n "$COMPLEX_DATA" | sha512sum | awk '{print \$1}') 
+            COMPLEX_DATA="$RANDOM_DATA$TIMESTAMP"
+            HASH_VALUE=$(echo -n "$COMPLEX_DATA" | sha512sum | awk '{print $1}')
             
             echo "$RANDOM_DATA" >> daily-commit.txt
             echo "Hash: $HASH_VALUE" >> daily-commit.txt
@@ -36,7 +36,6 @@ jobs:
             git add daily-commit.txt
             git commit -m "chore: Daily maintenance - $i times" || echo "No changes to commit"
           done
-
 
           git push
         env:
