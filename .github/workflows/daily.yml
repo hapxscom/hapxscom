@@ -3,8 +3,8 @@ name: Daily Maintenance
 on:
   push:
   schedule:
-    - cron: "0 0 * * *" # 每天午夜只执行一次
-  workflow_dispatch: # 允许手动触发
+    - cron: "0 0 * * *"
+  workflow_dispatch:
 
 jobs:
   update-file:
@@ -12,17 +12,21 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@main
         with:
           fetch-depth: 0
 
+      - name: Clear daily-commit.txt
+        run: |
+          echo -n '' > daily-commit.txt
+
       - name: Generate Random Data and Complex Hash
         run: |
-          for i in {1..25}; do
+          for i in {1..20}; do
             RANDOM_DATA=$(openssl rand -base64 96)
-            TIMESTAMP=$(date +%s%N)  # 纳秒时间戳
-            COMPLEX_DATA="$RANDOM_DATA$TIMESTAMP"  # 组合随机数据和时间戳
-            HASH_VALUE=$(echo -n "$COMPLEX_DATA" | sha512sum | awk '{print $1}')  # 使用 SHA-512 算法
+            TIMESTAMP=$(date +%s%N)
+            COMPLEX_DATA="$RANDOM_DATA$TIMESTAMP"
+            HASH_VALUE=$(echo -n "$COMPLEX_DATA" | sha512sum | awk '{print \$1}')  # 使用 SHA-512 算法
             
             echo "$RANDOM_DATA" >> daily-commit.txt
             echo "Hash: $HASH_VALUE" >> daily-commit.txt
