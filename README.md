@@ -2,13 +2,13 @@
 
 ## Hi there 👋
 
-- 🔭 I'm currently working on creating an AI website for the best chat.
-- 🌱 I'm still going to school.
-- 👯 I want to cooperate with people who have the same passion for AI and want to create products that are useful to society ⚡.
-- 🤔 I'm looking for help on how to optimize my code and improve AI performance.
-- 💬 Ask me about anything related to AI, I will try to answer as best I can.
+- 🔭 I'm currently tinkering with some open source projects to fix minor issues and add automated processes
+- 🌱 I'm still in school, balancing academics with my passion for gaming.
+- 👯 I'm eager to collaborate with others who are passionate about AI and want to create useful tools for the Minecraft community⚡.
+- 🤔 I'm looking for guidance on optimizing code and improving AI performance, especially in the context of Minecraft.
+- 💬 Feel free to ask me anything AI or Minecraft related; I'll do my best to help!
 - 😄 My pronouns are he/him/guy.
-- 💁‍♂️ Here is the link to my projects ---> [https://docs.happys.icu](https://docs.happys.icu)
+- 💁‍♂️ Here's my project link ---> https://docs.happys.icu
 
 ## 📊 Statistics
 
