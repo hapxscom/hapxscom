@@ -28,7 +28,7 @@ jobs:
           pip install --upgrade -r requirements.txt
       - name: Test with pytest auto_perms.py
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
           USERNAME: "Happy-clo"
         run: |
           export GH_TOKEN=test_token
@@ -37,21 +37,21 @@ jobs:
       # 运行清理脚本
       - name: Run cleanup script
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
           USERNAME: "Happy-clo"
         run: |
           python .github/scripts/main.py
       # 清理forks
       - name: Run cleanup forks
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
           USERNAME: "Happy-clo"
         run: |
           python .github/scripts/cleanup_forks.py
       # 自动设置权限
       - name: Run auto set perms
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
           USERNAME: "Happy-clo"
         run: |
           python .github/scripts/auto_perms.py
