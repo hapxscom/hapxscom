@@ -14,12 +14,3 @@
 
 ![Profile Details](http://github-profile-summary-cards.vercel.app/api/cards/profile-details?username=Happy-clo&theme=github_dark)
 ![Activity Graph](https://user-images.githubusercontent.com/73097560/115834477-dbab4500-a447-11eb-908a-139a6edaec5c.gif)
-# 免责声明
-
-> [!CAUTION]  
-> 本分支仅用于个人开发提供学习研究，请勿直接使用任何附件。如出现任何有关源附件问题，本作者概不负责。
-
----
-
-> [!CAUTION]  
-> This branch is only for personal development, study and research. Please do not use any attachments directly. The author is not responsible for any problems with the source attachments.
