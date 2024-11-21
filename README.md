@@ -8,7 +8,7 @@
 - 🤔 I'm looking for guidance on optimizing code and improving AI performance, especially in the context of Minecraft.
 - 💬 Feel free to ask me anything AI or Minecraft related; I'll do my best to help!
 - 😄 My pronouns are he/him/guy.
-- 💁‍♂️ Here's my project link ---> https://docs.happys.icu
+- 💁‍♂️ Here's my project link ---> [https://freeai.happys.icu](https://freeai.happys.icu/)
 
 ## 📊 Statistics
 
