@@ -137,6 +137,23 @@ async def sync_fork(session, repo):
         logging.info(f"获取 {repo['full_name']} 的 upstream 更新...")
         subprocess.run(["git", "-C", repo_dir, "fetch", "upstream"], check=True)
 
+        # 检查 upstream 的默认分支
+        default_branch = "master"  # 默认分支
+        try:
+            # 获取 upstream 的默认分支
+            upstream_branches = (
+                subprocess.check_output(["git", "-C", repo_dir, "branch", "-r"])
+                .decode()
+                .strip()
+                .split("\n")
+            )
+            for branch in upstream_branches:
+                if "upstream/main" in branch:
+                    default_branch = "main"  # 如果找到 main 分支，则更新默认分支
+                    break
+        except Exception as e:
+            logging.error(f"检查 upstream 默认分支时出错: {e}")
+
         # 检查 fork 是否落后于 upstream
         logging.info(f"检查 {repo['full_name']} 是否落后于 upstream...")
         if (
@@ -147,7 +164,7 @@ async def sync_fork(session, repo):
                     repo_dir,
                     "merge-base",
                     "--is-ancestor",
-                    "upstream/master",
+                    f"upstream/{default_branch}",
                     "HEAD",
                 ]
             ).returncode
@@ -156,7 +173,8 @@ async def sync_fork(session, repo):
             logging.info(f"{repo['full_name']} 落后于 upstream，正在尝试同步...")
             try:
                 subprocess.run(
-                    ["git", "-C", repo_dir, "merge", "upstream/master"], check=True
+                    ["git", "-C", repo_dir, "merge", f"upstream/{default_branch}"],
+                    check=True,
                 )
                 logging.info(f"{repo['full_name']} 同步成功。")
             except subprocess.CalledProcessError as e:
