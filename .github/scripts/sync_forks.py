@@ -67,8 +67,14 @@ async def main():
 
         for repo in forks:
             # 检查是否为 fork 且有父仓库
-            if repo["fork"] and repo["parent"]:
+            if repo.get("fork") and repo.get(
+                "parent"
+            ):  # 使用 get() 方法来避免 KeyError
                 tasks.append(sync_fork(repo))
+            else:
+                print(
+                    f"跳过仓库 {repo['full_name']}，因为它不是有效的有父仓库的 fork。"
+                )
 
         # 并发执行所有同步任务
         await asyncio.gather(*tasks)
