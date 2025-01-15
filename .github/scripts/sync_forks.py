@@ -49,12 +49,19 @@ async def fetch_forks(session):
 
 def clone_repo(repo_url, repo_dir):
     """尝试使用 Git 命令克隆仓库"""
+    # 将 git:// 替换为 https://
+    if repo_url.startswith("git://"):
+        repo_url = repo_url.replace("git://", "https://")
+
     try:
         logging.info(f"正在使用 Git 命令克隆 {repo_url} 到 {repo_dir}...")
-        subprocess.run(["git", "clone", repo_url, repo_dir], check=True)
+        subprocess.run(["git", "clone", repo_url, repo_dir], check=True, timeout=60)
         logging.info(f"{repo_url} 克隆成功。")
     except subprocess.CalledProcessError:
         logging.error(f"使用 Git 命令克隆 {repo_url} 失败。")
+        return False
+    except subprocess.TimeoutExpired:
+        logging.error(f"克隆 {repo_url} 超时。")
         return False
     return True
 
