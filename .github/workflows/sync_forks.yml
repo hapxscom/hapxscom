@@ -1,0 +1,30 @@
+name: Sync Forks
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  sync_forks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.9" # 可以选择您需要的 Python 版本
+
+      - name: Install dependencies
+        run: |
+          pip install aiohttp GitPython
+
+      - name: Run sync script
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # 使用 GitHub 提供的令牌
+          GITHUB_USERNAME: ${{ github.actor }} # GitHub 用户名
+        run: |
+          python .github/scripts/sync_forks.py
