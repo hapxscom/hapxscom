@@ -4,6 +4,7 @@ import os
 import logging
 import shutil
 import subprocess
+from bs4 import BeautifulSoup
 
 # 设置日志配置
 logging.basicConfig(
@@ -47,6 +48,33 @@ async def fetch_forks(session):
     return forks
 
 
+async def get_upstream_url(session, repo_full_name):
+    """获取父仓库的 URL"""
+    url = f"https://github.com/{repo_full_name}"
+    async with session.get(url) as response:
+        if response.status != 200:
+            logging.error(f"无法获取仓库页面，状态码: {response.status}")
+            return None
+
+        # 解析 HTML 内容
+        html_content = await response.text()
+        soup = BeautifulSoup(html_content, "html.parser")
+
+        # 查找父仓库的链接
+        forked_from_span = soup.find(
+            "span", class_="text-small lh-condensed-ultra no-wrap mt-1"
+        )
+        if forked_from_span:
+            a_tag = forked_from_span.find("a")
+            if a_tag and "href" in a_tag.attrs:
+                upstream_repo = a_tag.attrs["href"].strip("/")
+                upstream_url = f"https://github.com/{upstream_repo}.git"
+                return upstream_url
+
+    logging.warning(f"未找到 {repo_full_name} 的父仓库信息。")
+    return None
+
+
 def clone_repo(repo_url, repo_dir):
     """尝试使用 Git 命令克隆仓库"""
     # 将 git:// 替换为 https://
@@ -55,13 +83,10 @@ def clone_repo(repo_url, repo_dir):
 
     try:
         logging.info(f"正在使用 Git 命令克隆 {repo_url} 到 {repo_dir}...")
-        subprocess.run(["git", "clone", repo_url, repo_dir], check=True, timeout=60)
+        subprocess.run(["git", "clone", repo_url, repo_dir], check=True)
         logging.info(f"{repo_url} 克隆成功。")
     except subprocess.CalledProcessError:
         logging.error(f"使用 Git 命令克隆 {repo_url} 失败。")
-        return False
-    except subprocess.TimeoutExpired:
-        logging.error(f"克隆 {repo_url} 超时。")
         return False
     return True
 
@@ -79,8 +104,14 @@ def install_git():
         logging.info("Git 安装完成。")
 
 
-async def sync_fork(repo):
+async def sync_fork(session, repo):
     try:
+        # 获取父仓库的 URL
+        upstream_url = await get_upstream_url(session, repo["full_name"])
+        if not upstream_url:
+            logging.error(f"无法获取 {repo['full_name']} 的父仓库 URL，跳过该仓库。")
+            return
+
         # 克隆 fork 的仓库
         repo_dir = f"./{repo['name']}"
         if not os.path.exists(repo_dir):
@@ -96,7 +127,6 @@ async def sync_fork(repo):
                     return
 
         # 添加 upstream 远程仓库
-        upstream_url = repo["parent"]["git_url"]
         logging.info(f"添加 upstream 远程仓库 {upstream_url} 到 {repo['full_name']}...")
         subprocess.run(
             ["git", "-C", repo_dir, "remote", "add", "upstream", upstream_url],
@@ -152,7 +182,7 @@ async def main():
         for repo in forks:
             # 检查是否为分叉且有父仓库
             if repo.get("fork") == True:  # 确保 fork 为 True
-                await sync_fork(repo)  # 确保依次处理每个仓库
+                await sync_fork(session, repo)  # 确保依次处理每个仓库
             else:
                 logging.info(
                     f"跳过仓库 {repo['full_name']}，因为它不是有效的有父仓库的 fork。"
