@@ -3,6 +3,7 @@ import aiohttp
 import os
 import git
 import logging
+import shutil
 
 # 设置日志配置
 logging.basicConfig(
@@ -52,7 +53,8 @@ async def sync_fork(repo):
         repo_dir = f"./{repo['name']}"
         if not os.path.exists(repo_dir):
             logging.info(f"正在克隆 {repo['full_name']}...")
-            git.Repo.clone_from(repo["git_url"], repo_dir)
+            # 使用 GitPython 的 clone 方法并显示进度
+            git.Repo.clone_from(repo["git_url"], repo_dir, progress=CloneProgress())
 
         # 打开克隆的仓库
         repo_obj = git.Repo(repo_dir)
@@ -81,6 +83,20 @@ async def sync_fork(repo):
 
     except Exception as e:
         logging.error(f"处理 {repo['full_name']} 时出错: {e}")
+    finally:
+        # 删除克隆的仓库
+        if os.path.exists(repo_dir):
+            logging.info(f"正在删除克隆的仓库 {repo['full_name']}...")
+            shutil.rmtree(repo_dir)
+
+
+class CloneProgress(git.remote.RemoteProgress):
+    def update(self, op_code, cur_count, max_count=None, message=""):
+        if max_count is not None:
+            percent = (cur_count / max_count) * 100
+            logging.info(f"{message} {cur_count}/{max_count} ({percent:.2f}%)")
+        else:
+            logging.info(f"{message} {cur_count}")
 
 
 async def main():
