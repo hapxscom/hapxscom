@@ -67,6 +67,10 @@ async def get_upstream_info(session, repo_full_name):
 
 def clone_repo(repo_url, repo_dir):
     """尝试使用 Git 命令克隆仓库"""
+    # 将 git:// 替换为 https://
+    if repo_url.startswith("git://"):
+        repo_url = repo_url.replace("git://", "https://")
+
     try:
         logging.info(f"正在使用 Git 命令克隆 {repo_url} 到 {repo_dir}...")
         subprocess.run(["git", "clone", repo_url, repo_dir], check=True)
