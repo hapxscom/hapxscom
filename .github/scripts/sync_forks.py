@@ -18,8 +18,26 @@ async def fetch_forks(session):
         "Authorization": f"token {GITHUB_TOKEN}",
         "Accept": "application/vnd.github.v3+json",
     }
-    async with session.get(url, headers=headers) as response:
-        return await response.json()
+
+    forks = []
+    page = 1
+    while True:
+        params = {"page": page, "per_page": 100}  # 每页请求 100 个仓库
+        async with session.get(url, headers=headers, params=params) as response:
+            # 检查响应状态
+            if response.status != 200:
+                print(f"请求失败，状态码: {response.status}")
+                break
+
+            # 获取当前页面的仓库数据
+            repos = await response.json()
+            if not repos:  # 如果没有更多仓库，退出循环
+                break
+
+            forks.extend(repos)  # 将当前页面的仓库添加到 forks 列表
+            page += 1  # 增加页面计数
+
+    return forks
 
 
 async def sync_fork(repo):
@@ -66,10 +84,10 @@ async def main():
         tasks = []
 
         for repo in forks:
-            # 检查是否为 fork 且有父仓库
-            if repo.get("fork") and repo.get(
-                "parent"
-            ):  # 使用 get() 方法来避免 KeyError
+            # 检查是否为分叉且有父仓库
+            if (
+                repo.get("fork") is True and repo.get("parent") is not None
+            ):  # 确保 fork 为 True 并且有 parent
                 tasks.append(sync_fork(repo))
             else:
                 print(
