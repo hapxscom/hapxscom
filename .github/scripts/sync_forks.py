@@ -4,7 +4,6 @@ import os
 import logging
 import shutil
 import subprocess
-from bs4 import BeautifulSoup
 
 # 设置日志配置
 logging.basicConfig(
@@ -20,7 +19,7 @@ GITHUB_API_URL = "https://api.github.com"
 
 
 async def fetch_forks(session):
-    # 获取当前用户的所有仓库
+    """获取当前用户的所有仓库"""
     url = f"{GITHUB_API_URL}/users/{GITHUB_USERNAME}/repos"
     headers = {
         "Authorization": f"token {GITHUB_TOKEN}",
@@ -32,55 +31,42 @@ async def fetch_forks(session):
     while True:
         params = {"page": page, "per_page": 100}  # 每页请求 100 个仓库
         async with session.get(url, headers=headers, params=params) as response:
-            # 检查响应状态
             if response.status != 200:
                 logging.error(f"请求失败，状态码: {response.status}")
                 break
 
-            # 获取当前页面的仓库数据
             repos = await response.json()
-            if not repos:  # 如果没有更多仓库，退出循环
+            if not repos:
                 break
 
-            forks.extend(repos)  # 将当前页面的仓库添加到 forks 列表
-            page += 1  # 增加页面计数
+            forks.extend(repos)
+            page += 1
 
     return forks
 
 
-async def get_upstream_url(session, repo_full_name):
-    """获取父仓库的 URL"""
-    url = f"https://github.com/{repo_full_name}"
-    async with session.get(url) as response:
+async def get_upstream_info(session, repo_full_name):
+    """获取上游仓库的信息，包括默认分支"""
+    url = f"{GITHUB_API_URL}/repos/{repo_full_name}"
+    headers = {
+        "Authorization": f"token {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github.v3+json",
+    }
+
+    async with session.get(url, headers=headers) as response:
         if response.status != 200:
-            logging.error(f"无法获取仓库页面，状态码: {response.status}")
-            return None
+            logging.error(f"无法获取上游仓库信息，状态码: {response.status}")
+            return None, None
 
-        # 解析 HTML 内容
-        html_content = await response.text()
-        soup = BeautifulSoup(html_content, "html.parser")
+        repo_info = await response.json()
+        upstream_url = repo_info.get("html_url")
+        default_branch = repo_info.get("default_branch")
 
-        # 查找父仓库的链接
-        forked_from_span = soup.find(
-            "span", class_="text-small lh-condensed-ultra no-wrap mt-1"
-        )
-        if forked_from_span:
-            a_tag = forked_from_span.find("a")
-            if a_tag and "href" in a_tag.attrs:
-                upstream_repo = a_tag.attrs["href"].strip("/")
-                upstream_url = f"https://github.com/{upstream_repo}.git"
-                return upstream_url
-
-    logging.warning(f"未找到 {repo_full_name} 的父仓库信息。")
-    return None
+        return upstream_url, default_branch
 
 
 def clone_repo(repo_url, repo_dir):
     """尝试使用 Git 命令克隆仓库"""
-    # 将 git:// 替换为 https://
-    if repo_url.startswith("git://"):
-        repo_url = repo_url.replace("git://", "https://")
-
     try:
         logging.info(f"正在使用 Git 命令克隆 {repo_url} 到 {repo_dir}...")
         subprocess.run(["git", "clone", repo_url, repo_dir], check=True)
@@ -106,12 +92,13 @@ def install_git():
 
 async def sync_fork(session, repo):
     try:
-        # 获取父仓库的 URL
-        upstream_url = await get_upstream_url(session, repo["full_name"])
+        # 获取父仓库的 URL 和默认分支
+        upstream_url, default_branch = await get_upstream_info(
+            session, repo["full_name"]
+        )
         if not upstream_url:
-            logging.error(f"无法获取 {repo['full_name']} 的父仓库 URL，跳过该仓库。")
+            logging.error(f"无法获取 {repo['full_name']} 的父仓库信息，跳过该仓库。")
             return
-
         # 克隆 fork 的仓库
         repo_dir = f"./{repo['name']}"
         if not os.path.exists(repo_dir):
@@ -119,9 +106,7 @@ async def sync_fork(session, repo):
 
             # 尝试使用 Git 命令克隆
             if not clone_repo(repo["git_url"], repo_dir):
-                # 如果 Git 命令失败，检查 Git 是否安装
-                install_git()
-                # 尝试再次使用 Git 命令克隆
+                install_git()  # 检查 Git 是否安装
                 if not clone_repo(repo["git_url"], repo_dir):
                     logging.error(f"无法克隆 {repo['full_name']}，请手动检查。")
                     return
@@ -136,23 +121,6 @@ async def sync_fork(session, repo):
         # 获取 upstream 的更新
         logging.info(f"获取 {repo['full_name']} 的 upstream 更新...")
         subprocess.run(["git", "-C", repo_dir, "fetch", "upstream"], check=True)
-
-        # 检查 upstream 的默认分支
-        default_branch = "master"  # 默认分支
-        try:
-            # 获取 upstream 的默认分支
-            upstream_branches = (
-                subprocess.check_output(["git", "-C", repo_dir, "branch", "-r"])
-                .decode()
-                .strip()
-                .split("\n")
-            )
-            for branch in upstream_branches:
-                if "upstream/main" in branch:
-                    default_branch = "main"  # 如果找到 main 分支，则更新默认分支
-                    break
-        except Exception as e:
-            logging.error(f"检查 upstream 默认分支时出错: {e}")
 
         # 检查 fork 是否落后于 upstream
         logging.info(f"检查 {repo['full_name']} 是否落后于 upstream...")
