@@ -2,12 +2,9 @@
 name: Cleanup Non-Successful Runs And PRs
 
 on:
-  push:
-    branches:
-      - main
   schedule:
-    # 每天UTC时间12:00运行，你可以根据需要调整这个时间
     - cron: "0 12 * * *"
+
 jobs:
   cleanup:
     # 运行在最新的Ubuntu环境中

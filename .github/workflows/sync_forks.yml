@@ -1,9 +1,8 @@
 name: Sync Forks
 
 on:
-  push:
-    branches:
-      - main
+  schedule:
+    - cron: "0 12 * * *"
 
 jobs:
   sync_forks:
