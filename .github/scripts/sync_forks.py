@@ -1,9 +1,9 @@
 import asyncio
 import aiohttp
 import os
-import git
 import logging
 import shutil
+import subprocess
 
 # 设置日志配置
 logging.basicConfig(
@@ -47,35 +47,82 @@ async def fetch_forks(session):
     return forks
 
 
+def clone_repo(repo_url, repo_dir):
+    """尝试使用 Git 命令克隆仓库"""
+    try:
+        logging.info(f"正在使用 Git 命令克隆 {repo_url} 到 {repo_dir}...")
+        subprocess.run(["git", "clone", repo_url, repo_dir], check=True)
+        logging.info(f"{repo_url} 克隆成功。")
+    except subprocess.CalledProcessError:
+        logging.error(f"使用 Git 命令克隆 {repo_url} 失败。")
+        return False
+    return True
+
+
+def install_git():
+    """检查 Git 是否安装，如果未安装则使用 apt 安装"""
+    try:
+        logging.info("检查 Git 是否安装...")
+        subprocess.run(["git", "--version"], check=True)
+        logging.info("Git 已安装。")
+    except subprocess.CalledProcessError:
+        logging.error("Git 未安装，正在使用 apt 安装 Git...")
+        subprocess.run(["sudo", "apt", "update"], check=True)
+        subprocess.run(["sudo", "apt", "install", "git", "-y"], check=True)
+        logging.info("Git 安装完成。")
+
+
 async def sync_fork(repo):
     try:
         # 克隆 fork 的仓库
         repo_dir = f"./{repo['name']}"
         if not os.path.exists(repo_dir):
             logging.info(f"正在克隆 {repo['full_name']}...")
-            # 使用 GitPython 的 clone 方法并显示进度
-            git.Repo.clone_from(repo["git_url"], repo_dir, progress=CloneProgress())
 
-        # 打开克隆的仓库
-        repo_obj = git.Repo(repo_dir)
+            # 尝试使用 Git 命令克隆
+            if not clone_repo(repo["git_url"], repo_dir):
+                # 如果 Git 命令失败，检查 Git 是否安装
+                install_git()
+                # 尝试再次使用 Git 命令克隆
+                if not clone_repo(repo["git_url"], repo_dir):
+                    logging.error(f"无法克隆 {repo['full_name']}，请手动检查。")
+                    return
 
         # 添加 upstream 远程仓库
         upstream_url = repo["parent"]["git_url"]
-        if "upstream" not in [remote.name for remote in repo_obj.remotes]:
-            repo_obj.create_remote("upstream", upstream_url)
+        logging.info(f"添加 upstream 远程仓库 {upstream_url} 到 {repo['full_name']}...")
+        subprocess.run(
+            ["git", "-C", repo_dir, "remote", "add", "upstream", upstream_url],
+            check=True,
+        )
 
         # 获取 upstream 的更新
-        repo_obj.remotes.upstream.fetch()
+        logging.info(f"获取 {repo['full_name']} 的 upstream 更新...")
+        subprocess.run(["git", "-C", repo_dir, "fetch", "upstream"], check=True)
 
         # 检查 fork 是否落后于 upstream
-        if repo_obj.is_ancestor(
-            repo_obj.remotes.upstream.refs.master, repo_obj.head.ref
+        logging.info(f"检查 {repo['full_name']} 是否落后于 upstream...")
+        if (
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    repo_dir,
+                    "merge-base",
+                    "--is-ancestor",
+                    "upstream/master",
+                    "HEAD",
+                ]
+            ).returncode
+            == 0
         ):
             logging.info(f"{repo['full_name']} 落后于 upstream，正在尝试同步...")
             try:
-                repo_obj.git.merge("upstream/master")
+                subprocess.run(
+                    ["git", "-C", repo_dir, "merge", "upstream/master"], check=True
+                )
                 logging.info(f"{repo['full_name']} 同步成功。")
-            except git.exc.GitCommandError as e:
+            except subprocess.CalledProcessError as e:
                 logging.error(f"{repo['full_name']} 发生冲突，需要手动处理。")
                 logging.error(e)
         else:
@@ -90,32 +137,19 @@ async def sync_fork(repo):
             shutil.rmtree(repo_dir)
 
 
-class CloneProgress(git.remote.RemoteProgress):
-    def update(self, op_code, cur_count, max_count=None, message=""):
-        if max_count is not None:
-            percent = (cur_count / max_count) * 100
-            logging.info(f"{message} {cur_count}/{max_count} ({percent:.2f}%)")
-        else:
-            logging.info(f"{message} {cur_count}")
-
-
 async def main():
     async with aiohttp.ClientSession() as session:
         # 获取所有 fork 仓库
         forks = await fetch_forks(session)
-        tasks = []
 
         for repo in forks:
             # 检查是否为分叉且有父仓库
             if repo.get("fork") == True:  # 确保 fork 为 True
-                tasks.append(sync_fork(repo))
+                await sync_fork(repo)  # 确保依次处理每个仓库
             else:
                 logging.info(
                     f"跳过仓库 {repo['full_name']}，因为它不是有效的有父仓库的 fork。"
                 )
-
-        # 并发执行所有同步任务
-        await asyncio.gather(*tasks)
 
 
 if __name__ == "__main__":
