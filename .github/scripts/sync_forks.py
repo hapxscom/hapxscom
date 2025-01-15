@@ -85,9 +85,7 @@ async def main():
 
         for repo in forks:
             # 检查是否为分叉且有父仓库
-            if (
-                repo.get("fork") is True and repo.get("parent") is not None
-            ):  # 确保 fork 为 True 并且有 parent
+            if repo.get("fork") == True:  # 确保 fork 为 True
                 tasks.append(sync_fork(repo))
             else:
                 print(
