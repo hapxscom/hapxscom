@@ -2,6 +2,12 @@ import asyncio
 import aiohttp
 import os
 import git
+import logging
+
+# 设置日志配置
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 # 从环境变量中获取 GitHub API Token 和用户名
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
@@ -26,7 +32,7 @@ async def fetch_forks(session):
         async with session.get(url, headers=headers, params=params) as response:
             # 检查响应状态
             if response.status != 200:
-                print(f"请求失败，状态码: {response.status}")
+                logging.error(f"请求失败，状态码: {response.status}")
                 break
 
             # 获取当前页面的仓库数据
@@ -45,7 +51,7 @@ async def sync_fork(repo):
         # 克隆 fork 的仓库
         repo_dir = f"./{repo['name']}"
         if not os.path.exists(repo_dir):
-            print(f"正在克隆 {repo['full_name']}...")
+            logging.info(f"正在克隆 {repo['full_name']}...")
             git.Repo.clone_from(repo["git_url"], repo_dir)
 
         # 打开克隆的仓库
@@ -63,18 +69,18 @@ async def sync_fork(repo):
         if repo_obj.is_ancestor(
             repo_obj.remotes.upstream.refs.master, repo_obj.head.ref
         ):
-            print(f"{repo['full_name']} 落后于 upstream，正在尝试同步...")
+            logging.info(f"{repo['full_name']} 落后于 upstream，正在尝试同步...")
             try:
                 repo_obj.git.merge("upstream/master")
-                print(f"{repo['full_name']} 同步成功。")
+                logging.info(f"{repo['full_name']} 同步成功。")
             except git.exc.GitCommandError as e:
-                print(f"{repo['full_name']} 发生冲突，需要手动处理。")
-                print(e)
+                logging.error(f"{repo['full_name']} 发生冲突，需要手动处理。")
+                logging.error(e)
         else:
-            print(f"{repo['full_name']} 已与 upstream 同步。")
+            logging.info(f"{repo['full_name']} 已与 upstream 同步。")
 
     except Exception as e:
-        print(f"处理 {repo['full_name']} 时出错: {e}")
+        logging.error(f"处理 {repo['full_name']} 时出错: {e}")
 
 
 async def main():
@@ -88,7 +94,7 @@ async def main():
             if repo.get("fork") == True:  # 确保 fork 为 True
                 tasks.append(sync_fork(repo))
             else:
-                print(
+                logging.info(
                     f"跳过仓库 {repo['full_name']}，因为它不是有效的有父仓库的 fork。"
                 )
 
@@ -99,6 +105,6 @@ async def main():
 if __name__ == "__main__":
     # 确保环境变量已设置
     if not GITHUB_TOKEN or not GITHUB_USERNAME:
-        print("请设置环境变量 GITHUB_TOKEN 和 GITHUB_USERNAME。")
+        logging.error("请设置环境变量 GITHUB_TOKEN 和 GITHUB_USERNAME。")
     else:
         asyncio.run(main())
