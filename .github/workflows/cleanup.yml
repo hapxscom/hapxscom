@@ -1,7 +1,8 @@
 # 清理非成功运行和PR的工作流程
-name: Cleanup Non-Successful Runs And PRs
+name: Cleanup Action Runs And PRs
 
 on:
+  push:
   schedule:
     - cron: "0 12 * * *"
 
