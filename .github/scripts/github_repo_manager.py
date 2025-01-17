@@ -73,7 +73,9 @@ class GitHubRepoManager:
 
                 for run in runs:
                     if run["conclusion"] != "success":
-                        self.delete_run(owner, repo, run["id"])
+                        self.delete_workflow(
+                            owner, repo, run["id"]
+                        )  # 使用统一的删除方法
 
                 page += 1
             else:
@@ -317,7 +319,7 @@ class GitHubRepoManager:
 
         for run in all_runs:
             if run["id"] != latest_runs[run["name"]]["id"]:
-                self.delete_workflow(owner, repo, run["id"])
+                self.delete_workflow(owner, repo, run["id"])  # 统一调用删除方法
 
     def close_all_open_prs(self, owner, repo):
         """
