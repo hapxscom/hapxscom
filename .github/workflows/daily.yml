@@ -19,21 +19,25 @@ jobs:
         run: |
           echo -n '' > daily-commit.txt
 
-      - name: Generate Random Data and Complex Hash
+      - name: Generate Data and Hash
         run: |
-          for i in {1..20}; do
-            RANDOM_DATA=$(openssl rand -base64 96)
-            TIMESTAMP=$(date +%s%N)
-            COMPLEX_DATA="$RANDOM_DATA$TIMESTAMP"
-            HASH_VALUE=$(echo -n "$COMPLEX_DATA" | sha512sum | awk '{print $1}')
-            
-            echo "$RANDOM_DATA" >> daily-commit.txt
-            echo "Hash: $HASH_VALUE" >> daily-commit.txt
+          for x in {1..20}; do
+            RND_DATA=$(openssl rand -base64 96)
+            TS=$(date +%s%N)
+            COMB_DATA="$RND_DATA$TS"
+            HSH_VAL=$(echo -n "$COMB_DATA" | sha512sum | awk '{print $1}')
+
+            echo "$RND_DATA" >> daily-commit.txt
+            echo "Hash: $HSH_VAL" >> daily-commit.txt
             
             git config --local user.name "Happy-clo"
             git config --local user.email "support@wdsj.one"
+
             git add daily-commit.txt
-            git commit -m "chore: Daily maintenance - $i times" || echo "No changes to commit"
+            
+            git commit -m "chore: Daily maintenance - Iteration $x" || echo "No changes to commit"
+
+            sleep $(( RANDOM % 3 + 1 ))
           done
 
           git push
