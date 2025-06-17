@@ -277,9 +277,22 @@ class GitHubRepoManager:
                 )
                 return
             else:
+                # 获取详细信息
+                commit_id = workflow_run.get("head_sha", "未知")
+                commit_pusher = (
+                    workflow_run.get("head_commit", {})
+                    .get("committer", {})
+                    .get("name", "未知")
+                )
+                created_at = workflow_run.get("created_at", "未知")
+                branch = workflow_run.get("head_branch", "未知")
                 logging.info(
                     f"工作流 ID {workflow_id} 状态为 '{workflow_run.get('status')}'，准备删除。"
                 )
+                logging.info(f"  commit_id={commit_id}")
+                logging.info(f"  推送者={commit_pusher}")
+                logging.info(f"  创建时间={created_at}")
+                logging.info(f"  分支={branch}")
         else:
             logging.error(f"获取工作流 {workflow_id} 状态时失败，无法进行删除。")
             return
@@ -356,4 +369,17 @@ class GitHubRepoManager:
             elif isinstance(actor, str):
                 login = actor
             if login == "dependabot[bot]":
+                # 打印详细信息
+                commit_id = run.get("head_sha", "未知")
+                commit_pusher = (
+                    run.get("head_commit", {}).get("committer", {}).get("name", "未知")
+                )
+                created_at = run.get("created_at", "未知")
+                branch = run.get("head_branch", "未知")
+                logging.info(f"准备删除 dependabot 触发的 workflow_run:")
+                logging.info("  id=" + str(run["id"]))
+                logging.info(f"  commit_id={commit_id}")
+                logging.info(f"  推送者={commit_pusher}")
+                logging.info(f"  创建时间={created_at}")
+                logging.info(f"  分支={branch}")
                 self.delete_workflow(owner, repo, run["id"])
