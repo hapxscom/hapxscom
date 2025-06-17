@@ -338,3 +338,22 @@ class GitHubRepoManager:
                 logging.info(f"关闭了 {owner}/{repo} 的PR #{pr['number']}")
         else:
             logging.error(f"无法获取 {owner}/{repo} 的开放PR列表")
+
+    def delete_dependabot_runs_for_repo(self, owner, repo):
+        """
+        删除指定仓库中所有由 dependabot[bot] 触发的工作流运行。
+
+        :param owner: 仓库所有者。
+        :param repo: 仓库名称。
+        """
+        all_runs = self.get_workflow_runs(owner, repo)
+        for run in all_runs:
+            actor = run.get("triggering_actor") or run.get("actor")
+            # triggering_actor 结构为 dict，actor 也可能为 dict
+            login = None
+            if isinstance(actor, dict):
+                login = actor.get("login")
+            elif isinstance(actor, str):
+                login = actor
+            if login == "dependabot[bot]":
+                self.delete_workflow(owner, repo, run["id"])
