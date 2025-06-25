@@ -37,20 +37,20 @@ jobs:
       - name: Run cleanup script
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          USERNAME: "Happy-clo"
+          USERNAME: "hapxscom"
         run: |
           python .github/scripts/main.py
 
       - name: Run cleanup forks
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          USERNAME: "Happy-clo"
+          USERNAME: "hapxscom"
         run: |
           python .github/scripts/cleanup_forks.py
 
       - name: Run auto set perms
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          USERNAME: "Happy-clo"
+          USERNAME: "hapxscom"
         run: |
           python .github/scripts/auto_perms.py
